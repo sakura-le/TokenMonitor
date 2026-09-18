@@ -1,0 +1,16 @@
+# Build artifacts
+bin/
+obj/
+publish/
+*.user
+.vs/
+
+# Runtime data (never commit; may contain API keys / usage data)
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# OS
+Thumbs.db
+desktop.ini

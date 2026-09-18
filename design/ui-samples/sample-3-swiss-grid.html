@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Token Monitor · 设计样例 3 — 瑞士网格 Swiss Grid</title>
+<style>
+/* ============================================================
+   Token Monitor · Sample 3 「瑞士网格 Swiss Grid」
+   概念：International Style 数据海报。冷灰白底、白色模数网格
+   以 1px 发丝线切分，粗黑体大数字为唯一主角；瑞士红作品牌与
+   告警，钴蓝作数据主色。全直角、无阴影、无渐变、无装饰纹样，
+   动效为快速错峰滑入，干脆利落。
+   ============================================================ */
+:root{
+  --bg:#EDEDEA; --panel:#FFFFFF; --wash:#F6F6F3;
+  --ink:#111111; --dim:#6E6E6E; --faint:#9C9C96;
+  --hair:#D6D6D0; --rule:#111111;
+  --red:#E2231A; --cobalt:#2440C8; --grn:#1F7A3D; --amb:#C77800;
+  --grot:"Segoe UI","Segoe UI Variable Text","Helvetica Neue",Arial,"Microsoft YaHei",sans-serif;
+  --step:cubic-bezier(.2,.6,.2,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--grot);font-size:14px;padding:48px 40px 120px}
+/* ---------- 展示页框架 ---------- */
+.spec-head{max-width:1200px;margin:0 auto 8px;border-bottom:4px solid var(--rule);padding-bottom:18px;display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap}
+.spec-head .no{font-size:11px;letter-spacing:.34em;color:var(--dim);text-transform:uppercase}
+.spec-head h1{font-size:42px;font-weight:800;letter-spacing:-.01em;line-height:1;margin-top:8px}
+.spec-head h1 em{font-style:normal;color:var(--red)}
+.spec-head .lede{max-width:430px;font-size:12.5px;color:var(--dim);line-height:1.8;text-align:right}
+section{max-width:1200px;margin:62px auto 0}
+.sec-title{display:flex;align-items:baseline;gap:14px;border-bottom:2px solid var(--rule);padding-bottom:8px;margin-bottom:24px}
+.sec-title .idx{color:var(--red);font-weight:800;font-size:13px;letter-spacing:.1em}
+.sec-title h2{font-size:20px;font-weight:800;letter-spacing:.02em}
+.sec-title .en{margin-left:auto;font-size:10.5px;color:var(--faint);letter-spacing:.26em;text-transform:uppercase;font-weight:600}
+.note{font-size:12.5px;color:var(--dim);line-height:1.9;max-width:780px;margin:-12px 0 22px}
+.note b{color:var(--red)}
+.frame{display:flex;flex-wrap:wrap;gap:36px;align-items:flex-start}
+
+/* ---------- 主面板 760×560 ---------- */
+.panel{width:760px;height:560px;flex:0 0 auto;background:var(--panel);border:1px solid var(--rule);border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
+/* 标题栏 */
+.tb{height:48px;flex:0 0 auto;display:flex;align-items:center;border-bottom:1px solid var(--rule)}
+.tb>div{display:flex;align-items:center;gap:9px;padding:0 13px;border-right:1px solid var(--rule)}
+.logo .sq{width:15px;height:15px;background:var(--red);border-radius:5px}
+.logo b{font-size:14.5px;font-weight:800;letter-spacing:.01em}
+.logo span{font-size:10px;color:var(--faint);letter-spacing:.16em;font-weight:600}
+.caliber{font-size:10.5px;font-weight:700;letter-spacing:.1em;border-right:1px solid var(--rule)!important;color:var(--dim)}
+.caliber.local{color:var(--cobalt)}
+.caliber.local::before{content:"";display:inline-block;width:8px;height:8px;background:var(--cobalt);margin-right:7px}
+.caliber.utc{color:var(--amb)}
+.caliber.utc::before{content:"";display:inline-block;width:8px;height:8px;background:var(--amb);margin-right:7px}
+.tb .grow{flex:1;border-right:none!important}
+.tb .op{gap:8px;font-size:10px;color:var(--faint);letter-spacing:.14em;font-weight:600}
+.tb input[type=range]{width:58px;accent-color:var(--red);height:3px}
+.tb-btn{font-size:11px;font-weight:700;letter-spacing:.08em;background:none;border:1px solid var(--rule);border-radius:9px;color:var(--dim);cursor:pointer;padding:6px 13px;margin-right:8px}
+.tb-btn:last-child{margin-right:12px}
+.tb-btn:hover{color:var(--ink);background:var(--wash)}
+.tb-btn.on{color:#fff;background:var(--ink)}
+.tb-btn.warn{color:var(--red)}
+/* 漏抓横幅 */
+.banner{flex:0 0 auto;display:flex;align-items:center;gap:12px;background:var(--red);color:#fff;padding:7px 14px;margin:10px 12px 0;border-radius:11px;font-size:12.5px;font-weight:600}
+.banner .sig{background:#fff;color:var(--red);font-weight:800;font-size:10.5px;padding:1px 8px;border-radius:6px;letter-spacing:.14em}
+.banner .act{margin-left:auto;background:transparent;border:1px solid rgba(255,255,255,.75);border-radius:8px;color:#fff;font-family:var(--grot);font-size:11px;font-weight:700;padding:2.5px 12px;cursor:pointer;letter-spacing:.08em}
+.banner .act:hover{background:#fff;color:var(--red)}
+.banner .x{background:none;border:none;color:rgba(255,255,255,.8);cursor:pointer;font-size:13px;font-weight:700}
+/* 主体：发丝线模数网格 */
+.body{flex:1;display:grid;grid-template-columns:1fr 268px;min-height:0}
+.cards{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:10px;padding:12px;background:transparent;border-right:1px solid var(--rule);min-height:0}
+.card{background:var(--panel);border:1px solid var(--hair);border-radius:14px;padding:11px 13px 10px;display:flex;flex-direction:column;gap:6px;min-height:0;position:relative;cursor:pointer;transition:background .12s var(--step)}
+.card:hover{background:var(--wash)}
+.card.sel{box-shadow:inset 0 3px 0 var(--red);border-color:var(--rule)}
+.card .ix{position:absolute;top:4px;right:9px;font-size:34px;font-weight:800;color:var(--bg);letter-spacing:-.02em;line-height:1;pointer-events:none}
+.card.sel .ix{color:#FBE3E1}
+.card header{display:flex;align-items:center;gap:8px;position:relative;z-index:1}
+.pv{font-size:9px;font-weight:800;letter-spacing:.12em;padding:2.5px 7px;border-radius:7px;color:#fff}
+.pv.glm{background:var(--ink)}.pv.ds{background:var(--cobalt)}.pv.qw{background:#5A5FB0}.pv.ms{background:var(--grn)}
+.card header b{font-size:13.5px;font-weight:700;letter-spacing:.01em}
+.miss{margin-left:auto;background:var(--red);color:#fff;font-size:9.5px;font-weight:800;padding:2px 6px;border-radius:7px;letter-spacing:.08em;position:relative;z-index:1}
+.card .row1{display:flex;align-items:baseline;justify-content:space-between;position:relative;z-index:1}
+.card .req{font-size:11px;color:var(--dim);font-weight:600}
+.card .req b{color:var(--ink);font-size:13px;font-weight:800}
+.card .delta{color:var(--grn);font-size:12px;font-weight:800;font-variant-numeric:tabular-nums}
+.card .delta::before{content:"▲";font-size:7.5px;margin-right:3px;vertical-align:1.5px}
+.card .total{font-size:27px;font-weight:800;letter-spacing:-.01em;line-height:1.05;font-variant-numeric:tabular-nums;position:relative;z-index:1}
+.card .total small{font-size:9px;font-weight:700;color:var(--faint);letter-spacing:.2em;margin-left:6px}
+.card .mul-chip{position:absolute;top:38px;right:12px;font-size:9px;font-weight:800;color:#fff;background:var(--amb);padding:1.5px 6px;border-radius:7px;letter-spacing:.08em;display:none;z-index:1}
+.card.mul .mul-chip{display:inline-block}
+/* 三条占比条（平面色块） */
+.bars{display:flex;flex-direction:column;gap:5px;margin-top:1px;position:relative;z-index:1}
+.bar{display:grid;grid-template-columns:34px 1fr 40px;align-items:center;gap:7px;font-size:9px;font-weight:700;color:var(--dim);letter-spacing:.04em}
+.bar .track{height:7px;border-radius:999px;background:var(--bg);overflow:hidden}
+.bar .fill{height:100%;border-radius:999px;transition:width .24s var(--step)}
+.bar.h .fill{background:var(--cobalt)}
+.bar.m .fill{background:var(--red)}
+.bar.o .fill{background:var(--ink)}
+.bar .v{text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+/* 控件行 */
+.ctl{margin-top:auto;display:flex;align-items:center;justify-content:space-between;padding-top:2px;position:relative;z-index:1}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:9px;overflow:hidden}
+.seg button{font-family:var(--grot);font-size:10px;font-weight:700;padding:3px 10px;background:#fff;border:none;color:var(--dim);cursor:pointer;letter-spacing:.08em}
+.seg button.on{background:var(--ink);color:#fff}
+.tz-dot{font-size:9.5px;font-weight:800;letter-spacing:.12em;color:var(--faint);border:1px solid var(--hair);border-radius:9px;padding:2px 7px;cursor:pointer}
+.card.tz-utc .tz-dot{color:var(--amb);border-color:var(--amb)}
+/* 详情侧栏 */
+.side{display:flex;flex-direction:column;min-height:0}
+.side .head{background:var(--ink);color:#fff;padding:9px 13px;display:flex;align-items:baseline;justify-content:space-between}
+.side .head b{font-size:13px;font-weight:800;letter-spacing:.04em}
+.side .head span{font-size:9.5px;font-weight:700;color:#B9B9B4;letter-spacing:.14em}
+.side .in{padding:11px 13px;display:flex;flex-direction:column;gap:10px;flex:1;min-height:0}
+.ringrow{display:flex;align-items:center;gap:12px}
+.ring{position:relative;width:88px;height:88px;flex:0 0 auto}
+.ring svg{transform:rotate(-90deg)}
+.ring .pct{position:absolute;inset:0;display:grid;place-items:center;font-weight:800;font-size:17px;letter-spacing:-.02em}
+.ring .pct small{display:block;font-size:8px;font-weight:700;color:var(--faint);letter-spacing:.22em;text-align:center}
+.ringinfo{font-size:10.5px;color:var(--dim);line-height:1.7;font-weight:600}
+.ringinfo b{display:block;color:var(--ink);font-size:12.5px;font-weight:800}
+/* 四项统计 */
+.stat4{list-style:none;border-top:1px solid var(--rule)}
+.stat4 li{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--dim);font-weight:600;padding:5px 0;border-bottom:1px solid var(--hair)}
+.stat4 .blk{width:8px;height:8px}
+.stat4 .h{background:var(--cobalt)}.stat4 .m{background:var(--red)}.stat4 .o{background:var(--ink)}.stat4 .r{background:var(--faint)}
+.stat4 b{margin-left:auto;color:var(--ink);font-size:12.5px;font-weight:800;font-variant-numeric:tabular-nums}
+/* 近 7 日 */
+.chart7{border:1px solid var(--rule);border-radius:12px;padding:8px 8px 5px;position:relative;background:var(--panel)}
+.chart7 .ct{display:flex;justify-content:space-between;font-size:8.5px;font-weight:700;color:var(--faint);letter-spacing:.18em;margin-bottom:3px}
+.chart7 svg{display:block}
+.chart7 .tip{position:absolute;display:none;pointer-events:none;background:var(--ink);color:#fff;font-size:10px;font-weight:700;padding:3.5px 9px;white-space:nowrap;z-index:5}
+.chart7 .tip i{font-style:normal;color:#F2B8B5}
+/* 费用 */
+.cost{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--rule);border-radius:11px;overflow:hidden}
+.cost .cell{padding:7px 11px 6px}
+.cost .cell+.cell{border-left:1px solid var(--rule)}
+.cost .cur{font-size:8.5px;font-weight:800;letter-spacing:.22em;color:var(--faint)}
+.cost .amt{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.25;letter-spacing:-.01em}
+.cost .amt.cny{color:var(--red)}
+.cost .amt.usd{color:var(--cobalt)}
+.cost-alt{border:1px dashed var(--faint);border-radius:11px;color:var(--dim);font-size:10.5px;font-weight:600;padding:5px 10px}
+.cost-alt b{color:var(--amb)}
+/* 双时钟 */
+.clocks{margin-top:auto;display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--rule);border-radius:11px;overflow:hidden}
+.clocks div{padding:6px 11px}
+.clocks div+div{border-left:1px solid var(--rule)}
+.clocks .z{font-size:8px;font-weight:800;letter-spacing:.22em;color:var(--faint)}
+.clocks .t{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.clocks .local .t{color:var(--cobalt)}
+/* ---------- 对话框 ---------- */
+.dialog-stage{width:760px;height:560px;flex:0 0 auto;position:relative;display:grid;place-items:center;overflow:hidden;border:1px solid var(--rule);background:rgba(17,17,17,.55)}
+.dialog{width:576px;background:var(--panel);border:1px solid var(--rule);border-radius:16px;overflow:hidden;box-shadow:16px 18px 0 rgba(17,17,17,.35)}
+.dlg-tb{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:4px solid var(--rule)}
+.dlg-tb h3{font-size:17px;font-weight:800;letter-spacing:.02em}
+.dlg-tb .mno{font-size:11px;font-weight:800;color:#fff;background:var(--red);padding:2px 8px;border-radius:8px;letter-spacing:.08em}
+.dlg-tb .x{margin-left:auto;font-family:var(--grot);font-weight:800;color:var(--dim);border:1px solid var(--rule);border-radius:8px;background:#fff;width:26px;height:26px;cursor:pointer}
+.dlg-tb .x:hover{background:var(--ink);color:#fff}
+.dlg-ver{display:flex;gap:18px;align-items:center;background:var(--wash);border-bottom:1px solid var(--rule);font-size:11px;font-weight:700;color:var(--dim);padding:6px 16px}
+.dlg-ver .vno{color:var(--red)}
+.dlg-body{padding:15px 16px 4px}
+.frow{display:flex;gap:15px;margin-bottom:12px}
+.fld{flex:1}
+.fld label{display:block;font-size:9px;font-weight:800;letter-spacing:.2em;color:var(--faint);margin-bottom:5px;text-transform:uppercase}
+.inp,select.inp{width:100%;font-family:var(--grot);font-size:13px;font-weight:600;color:var(--ink);background:#fff;border:1px solid var(--rule);border-radius:9px;padding:6px 9px;outline:none}
+.inp:focus{box-shadow:inset 0 -3px 0 var(--cobalt)}
+.rulecard{border:1px solid var(--rule);border-radius:14px;padding:12px 14px;margin-bottom:12px}
+.rulecard .rh{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.rulecard .rh b{font-size:13px;font-weight:800}
+.rulecard .rh .tag{font-size:9px;font-weight:800;color:var(--dim);border:1px solid var(--hair);padding:1.5px 6px;letter-spacing:.1em}
+.rulecard .rh .del{margin-left:auto;font-family:var(--grot);font-size:10.5px;font-weight:800;color:var(--red);background:none;border:none;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.period{display:grid;grid-template-columns:1fr 16px 1fr 26px;gap:8px;align-items:center;margin-bottom:8px}
+.period .arrow{text-align:center;color:var(--faint);font-weight:800}
+.period .del1{font-family:var(--grot);color:var(--faint);background:none;border:none;cursor:pointer;font-weight:800}
+.period .del1:hover{color:var(--red)}
+.chips{display:flex;gap:6px}
+.chip{width:31px;height:27px;display:grid;place-items:center;border:1px solid var(--rule);border-radius:9px;color:var(--dim);cursor:pointer;font-size:11.5px;font-weight:700;background:#fff}
+.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.chip.weekend{color:var(--red)}
+.chip.on.weekend{background:var(--red);border-color:var(--red);color:#fff}
+.prices{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px;margin-top:11px}
+.price .u{font-size:9px;font-weight:700;color:var(--faint);margin-top:4px;letter-spacing:.04em}
+.addrow{font-family:var(--grot);font-size:11px;font-weight:800;color:var(--cobalt);background:none;border:1px dashed var(--cobalt);border-radius:9px;padding:4.5px 13px;cursor:pointer}
+.dlg-foot{display:flex;align-items:center;gap:10px;border-top:1px solid var(--rule);padding:12px 16px;background:var(--wash)}
+.dlg-foot .hint{font-size:10px;font-weight:600;color:var(--faint)}
+.btn{font-family:var(--grot);font-size:12px;font-weight:800;letter-spacing:.08em;padding:7px 22px;cursor:pointer;border:1px solid var(--rule);border-radius:11px;background:#fff;color:var(--ink)}
+.btn.primary{background:var(--ink);color:#fff}
+.btn.primary:hover{background:var(--red);border-color:var(--red)}
+.btn.ghost{color:var(--dim)}
+.dlg-foot .btn.primary{margin-left:auto}
+/* ---------- 菜单 ---------- */
+.menuwrap{display:flex;gap:52px;align-items:flex-start;flex-wrap:wrap}
+.menu{width:220px;background:#fff;border:1px solid var(--rule);border-radius:14px;overflow:hidden;box-shadow:8px 9px 0 rgba(17,17,17,.2);font-size:12.5px;padding:4px 0}
+.menu .mi{display:flex;align-items:center;gap:10px;padding:6px 14px;cursor:default;font-weight:600}
+.menu .mi:hover{background:var(--wash)}
+.menu .mi .ic{width:14px;font-size:9.5px;font-weight:800;color:var(--red)}
+.menu .mi .ar{margin-left:auto;color:var(--faint);font-size:9px;font-weight:800}
+.menu .mi.sub::after{content:"▸";margin-left:auto;color:var(--faint);font-size:9px;font-weight:800}
+.menu .mi .kb{margin-left:auto;font-size:9px;color:var(--faint);font-weight:700}
+.menu .sep{height:1px;background:var(--rule);margin:4px 0}
+.menu .mi.danger{color:var(--red);font-weight:800}
+.menu .mi.dis{color:var(--faint)}
+.menu .mi.dis .st{margin-left:auto;font-size:9.5px;font-weight:800;color:var(--grn)}
+.menu .mi.dis:hover{background:transparent}
+.menu .mi .ck{margin-left:auto;font-weight:800}
+.menu .mi .ck::before{content:"●";color:var(--red);font-size:8px;margin-right:5px;vertical-align:1px}
+.menu-caption{font-size:10.5px;font-weight:800;color:var(--faint);letter-spacing:.2em;margin-bottom:9px;text-transform:uppercase}
+.submenu{width:198px}
+/* ---------- 悬浮球 ---------- */
+.ballwrap{display:flex;gap:64px;align-items:center}
+.ballstage{width:300px;height:220px;border:1px solid var(--rule);position:relative;display:grid;place-items:center;overflow:hidden;
+  background:linear-gradient(var(--hair) 1px,transparent 1px),linear-gradient(90deg,var(--hair) 1px,transparent 1px);background-size:25px 25px;background-color:#E4E4E0}
+.ball{width:66px;height:66px;border-radius:50%;background:#fff;border:1.5px solid var(--rule);display:grid;place-items:center;position:relative;cursor:pointer;box-shadow:6px 7px 0 rgba(17,17,17,.22)}
+.ball svg{position:absolute;inset:-1.5px;transform:rotate(-90deg)}
+.ball .in{text-align:center;position:relative;z-index:2}
+.ball .in b{font-size:14px;font-weight:800;display:block;line-height:1;letter-spacing:-.01em}
+.ball .in i{font-style:normal;font-size:8.5px;font-weight:800;color:var(--grn);display:block;margin-top:3px}
+.ball .in i::before{content:"▲";font-size:6px;margin-right:2px}
+.ball-tag{position:absolute;bottom:8px;left:10px;font-size:9.5px;font-weight:700;color:var(--dim);letter-spacing:.14em;text-transform:uppercase}
+.pill{width:470px;height:54px;background:#fff;border:1.5px solid var(--rule);display:flex;align-items:stretch;padding:0;gap:0;overflow:hidden;box-shadow:6px 7px 0 rgba(17,17,17,.22)}
+.pill .lv{width:34px;background:var(--red);display:grid;place-items:center;color:#fff;font-size:10px;font-weight:800;letter-spacing:.1em}
+.pill .win{flex:1;overflow:hidden;display:flex;align-items:center;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent)}
+.mq{display:inline-flex;white-space:nowrap;animation:mq 16s linear infinite}
+.pill .win:hover .mq{animation-play-state:paused}
+@keyframes mq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.mq .it{display:inline-flex;align-items:baseline;gap:7px;font-size:11.5px;padding:0 17px}
+.mq .it b{font-weight:800;color:var(--cobalt)}
+.mq .it .v{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
+.mq .it .d{color:var(--grn);font-weight:800;font-size:10px}
+.mq .it .d::before{content:"▲";font-size:7px;margin-right:2px}
+.mq .it .sep{color:var(--hair)}
+.pill .clk{display:flex;flex-direction:column;justify-content:center;border-left:1px solid var(--rule);padding:0 12px;font-weight:800}
+.pill .clk b{font-size:12px;font-variant-numeric:tabular-nums}
+.pill .clk small{font-size:8px;color:var(--faint);letter-spacing:.16em;font-weight:700}
+/* ---------- 设计令牌 ---------- */
+.tokgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px}
+.tokcard{border:1px solid var(--rule);background:#fff;padding:16px}
+.tokcard h4{font-size:12.5px;font-weight:800;letter-spacing:.16em;border-bottom:2px solid var(--rule);padding-bottom:8px;margin-bottom:12px;text-transform:uppercase}
+.tokcard h4 i{font-style:normal;color:var(--red);margin-right:8px}
+.swrow{display:flex;align-items:center;gap:10px;padding:3.5px 0;font-size:10.5px;font-weight:700;color:var(--dim)}
+.swrow .sw{width:36px;height:19px;border:1px solid rgba(17,17,17,.25)}
+.swrow .nm{color:var(--ink);width:128px;font-size:11px}
+.toktable{width:100%;border-collapse:collapse;font-size:11px}
+.toktable td{padding:4.5px 4px;border-bottom:1px solid var(--hair);color:var(--dim);font-weight:600}
+.toktable td:first-child{color:var(--faint);width:44%;font-size:9.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.toktable td b{color:var(--ink);font-weight:800}
+.type-demo{display:flex;flex-direction:column;gap:7px}
+.type-demo .s1{font-size:24px;font-weight:800;letter-spacing:-.01em}
+.type-demo .s2{font-size:20px;font-weight:800;color:var(--cobalt);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.type-demo .s3{font-size:12.5px;font-weight:600;color:var(--dim)}
+.type-demo .s4{font-size:10.5px;font-weight:700;color:var(--dim)}
+.type-demo .s5{font-size:9px;font-weight:800;letter-spacing:.3em;color:var(--faint);text-transform:uppercase}
+/* ---------- 动效演示 ---------- */
+.motion{display:flex;gap:28px;flex-wrap:wrap;align-items:stretch}
+.demo{border:1px solid var(--rule);background:#fff;padding:18px 20px;width:300px;display:flex;flex-direction:column;gap:11px}
+.demo h5{font-size:10.5px;font-weight:800;letter-spacing:.18em;color:var(--faint);text-transform:uppercase}
+.demo .big{font-size:34px;font-weight:800;color:var(--grn);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.demo .desc{font-size:11px;color:var(--dim);line-height:1.8;font-weight:600}
+.demo .replay{margin-top:auto;align-self:flex-start;font-family:var(--grot);font-size:11px;font-weight:800;border:1px solid var(--rule);background:#fff;padding:4.5px 15px;cursor:pointer}
+.demo .replay:hover{background:var(--ink);color:#fff}
+.demoline{width:360px}
+footer{max-width:1200px;margin:80px auto 0;border-top:4px solid var(--rule);padding-top:13px;font-size:10px;font-weight:800;color:var(--faint);letter-spacing:.22em;display:flex;justify-content:space-between;text-transform:uppercase}
+/* 错峰滑入 */
+.stag{animation:slidin .32s var(--step) both}
+.card.stag:nth-child(2){animation-delay:.05s}.card.stag:nth-child(3){animation-delay:.1s}.card.stag:nth-child(4){animation-delay:.15s}
+@keyframes slidin{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<header class="spec-head">
+  <div>
+    <div class="no">Token Monitor — UI Sample 3 / 3</div>
+    <h1>瑞士网格 <em>Swiss Grid</em></h1>
+  </div>
+  <p class="lede">International Style 的数据海报：白色模数网格用 1px 发丝线切分，粗黑体大数字是唯一主角，瑞士红负责品牌与告警、钴蓝负责数据。全直角、零阴影、零渐变、零装饰纹样，秩序即美感。</p>
+</header>
+
+<!-- 01 主面板 -->
+<section>
+  <div class="sec-title"><span class="idx">01</span><h2>主面板 · 760×560</h2><span class="en">Main Panel / Modular Grid</span></div>
+  <p class="note">信息架构不变。卡片不再是"浮起的卡"，而是被发丝线切开的<b>网格单元</b>：选中单元以 3px 红色顶杠标记，背景浮现巨大序号。标题栏为通栏分格结构，口径徽章以色块前缀表达。<b>可交互</b>：卡一 实际/倍率、UTC/LOCAL 切换；折线悬停 tooltip。</p>
+  <div class="frame">
+    <div class="panel">
+      <div class="tb">
+        <div class="logo"><span class="sq"></span><b>Token Monitor</b><span>TM-01</span></div>
+        <div class="caliber local" id="tbCaliber">LOCAL · UTC+8</div>
+        <div class="grow"></div>
+        <div class="op"><span>透明度</span><input type="range" min="30" max="100" value="100"></div>
+        <button class="tb-btn on">置顶</button>
+        <button class="tb-btn">收起到球</button>
+      </div>
+      <div class="banner">
+        <span class="sig">漏抓</span>
+        检测到 3 个漏抓请求，请校准补录
+        <button class="act">去补录</button>
+        <button class="x">✕</button>
+      </div>
+      <div class="body">
+        <div class="cards">
+          <article class="card sel stag" id="c1">
+            <span class="ix">01</span>
+            <header><span class="pv glm">GLM</span><b>glm-4.6</b><span class="miss">漏 3</span></header>
+            <div class="row1"><span class="req"><b id="c1req">342</b> 请求</span><span class="delta"><span class="cnt" data-v="1234">+1,234</span></span></div>
+            <div class="total" id="c1total">8,641,233<small>TOKENS</small></div>
+            <span class="mul-chip">×1.5 倍率计</span>
+            <div class="bars">
+              <div class="bar h"><span class="k">H 命中</span><div class="track"><div class="fill" style="width:53.6%"></div></div><span class="v">53.6</span></div>
+              <div class="bar m"><span class="k">M 未中</span><div class="track"><div class="fill" style="width:26.1%"></div></div><span class="v">26.1</span></div>
+              <div class="bar o"><span class="k">O 输出</span><div class="track"><div class="fill" style="width:20.3%"></div></div><span class="v">20.3</span></div>
+            </div>
+            <div class="ctl">
+              <div class="seg" id="c1seg"><button class="on" data-m="act">实际</button><button data-m="mul">倍率</button></div>
+              <span class="tz-dot" id="c1tz">UTC</span>
+            </div>
+          </article>
+          <article class="card stag">
+            <span class="ix">02</span>
+            <header><span class="pv ds">DEEPSEEK</span><b>deepseek-reasoner</b></header>
+            <div class="row1"><span class="req"><b>187</b> 请求</span><span class="delta"><span class="cnt" data-v="862">+862</span></span></div>
+            <div class="total">4,208,556<small>TOKENS</small></div>
+            <div class="bars">
+              <div class="bar h"><span class="k">H 命中</span><div class="track"><div class="fill" style="width:32.4%"></div></div><span class="v">32.4</span></div>
+              <div class="bar m"><span class="k">M 未中</span><div class="track"><div class="fill" style="width:33.4%"></div></div><span class="v">33.4</span></div>
+              <div class="bar o"><span class="k">O 输出</span><div class="track"><div class="fill" style="width:34.2%"></div></div><span class="v">34.2</span></div>
+            </div>
+            <div class="ctl">
+              <div class="seg"><button class="on">实际</button><button>倍率</button></div>
+              <span class="tz-dot">LOCAL</span>
+            </div>
+          </article>
+          <article class="card stag">
+            <span class="ix">03</span>
+            <header><span class="pv qw">QWEN</span><b>qwen3-max</b></header>
+            <div class="row1"><span class="req"><b>96</b> 请求</span><span class="delta"><span class="cnt" data-v="318">+318</span></span></div>
+            <div class="total">1,984,412<small>TOKENS</small></div>
+            <div class="bars">
+              <div class="bar h"><span class="k">H 命中</span><div class="track"><div class="fill" style="width:35.9%"></div></div><span class="v">35.9</span></div>
+              <div class="bar m"><span class="k">M 未中</span><div class="track"><div class="fill" style="width:32.3%"></div></div><span class="v">32.3</span></div>
+              <div class="bar o"><span class="k">O 输出</span><div class="track"><div class="fill" style="width:31.8%"></div></div><span class="v">31.8</span></div>
+            </div>
+            <div class="ctl">
+              <div class="seg"><button class="on">实际</button><button>倍率</button></div>
+              <span class="tz-dot">LOCAL</span>
+            </div>
+          </article>
+          <article class="card stag">
+            <span class="ix">04</span>
+            <header><span class="pv ms">MOONSHOT</span><b>kimi-k2-0905</b></header>
+            <div class="row1"><span class="req"><b>41</b> 请求</span><span class="delta"><span class="cnt" data-v="97">+97</span></span></div>
+            <div class="total">736,209<small>TOKENS</small></div>
+            <div class="bars">
+              <div class="bar h"><span class="k">H 命中</span><div class="track"><div class="fill" style="width:27.4%"></div></div><span class="v">27.4</span></div>
+              <div class="bar m"><span class="k">M 未中</span><div class="track"><div class="fill" style="width:43.8%"></div></div><span class="v">43.8</span></div>
+              <div class="bar o"><span class="k">O 输出</span><div class="track"><div class="fill" style="width:28.9%"></div></div><span class="v">28.9</span></div>
+            </div>
+            <div class="ctl">
+              <div class="seg"><button class="on">实际</button><button>倍率</button></div>
+              <span class="tz-dot">LOCAL</span>
+            </div>
+          </article>
+        </div>
+        <aside class="side">
+          <div class="head"><b>详情 · glm-4.6</b><span>本日 · LOCAL</span></div>
+          <div class="in">
+            <div class="ringrow">
+              <div class="ring">
+                <svg width="88" height="88" viewBox="0 0 88 88">
+                  <circle cx="44" cy="44" r="37" fill="none" stroke="#E4E4E0" stroke-width="9"/>
+                  <circle cx="44" cy="44" r="37" fill="none" stroke="#2440C8" stroke-width="9" stroke-dasharray="156.3 76"/>
+                </svg>
+                <div class="pct"><div>67.3%<small>命中率</small></div></div>
+              </div>
+              <div class="ringinfo"><b>缓存命中率</b>命中 ÷ (命中+未命中)<br>差价节省 ¥18.4206</div>
+            </div>
+            <ul class="stat4">
+              <li><i class="blk h"></i>缓存命中<b>4,635,324</b></li>
+              <li><i class="blk m"></i>未命中<b>2,252,231</b></li>
+              <li><i class="blk o"></i>输出<b>1,753,678</b></li>
+              <li><i class="blk r"></i>推理<b>640,118</b></li>
+            </ul>
+            <div class="chart7" id="chart7">
+              <div class="ct"><span>近 7 日 · TOTAL</span><span>单位 M</span></div>
+              <svg width="238" height="90" viewBox="0 0 238 90">
+                <g stroke="#E4E4E0" stroke-width="1"><line x1="8" y1="72" x2="230" y2="72"/><line x1="8" y1="45" x2="230" y2="45"/><line x1="8" y1="18" x2="230" y2="18"/></g>
+                <polyline id="line7" points="8,65.3 45.3,54.8 82.6,70 119.9,39.5 157.2,29 194.5,48.9 230,6"
+                          fill="none" stroke="#2440C8" stroke-width="2" stroke-linejoin="round"/>
+                <circle cx="230" cy="6" r="3.2" fill="#E2231A"/>
+                <g id="dots7" fill="#2440C8"></g>
+              </svg>
+              <div class="tip" id="tip7"></div>
+            </div>
+            <div class="cost">
+              <div class="cell"><div class="cur">CNY · 今日</div><div class="amt cny">¥42.1371</div></div>
+              <div class="cell"><div class="cur">USD · 今日</div><div class="amt usd">$5.8912</div></div>
+            </div>
+            <div class="cost-alt">deepseek-reasoner 选中时 → <b>套餐不计价</b> · Coding Plan，金额格显示"— —"</div>
+            <div class="clocks">
+              <div><div class="z">UTC</div><div class="t">14:32:07</div></div>
+              <div class="local"><div class="z">LOCAL +8</div><div class="t">22:32:07</div></div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 02 对话框 -->
+<section>
+  <div class="sec-title"><span class="idx">02</span><h2>对话框 · 计价配置</h2><span class="en">Dialog / Pricing Config</span></div>
+  <p class="note">粗黑标题规线 + 方角输入框，版本链以"当前 V3 → 追加 V4"的横幅提示；星期 chips 选中为黑块、周末红字。遮罩为 55% 墨色平面。</p>
+  <div class="frame">
+    <div class="dialog-stage">
+      <div class="dialog">
+        <div class="dlg-tb"><h3>计价配置</h3><span class="mno">glm-4.6</span><button class="x">✕</button></div>
+        <div class="dlg-ver"><span>当前 <b class="vno">V3</b> · 2026-09-01 生效中</span><span>保存后追加 <b class="vno">V4</b>，不覆盖历史</span><span style="margin-left:auto">日期基准 LOCAL · 货币 CNY</span></div>
+        <div class="dlg-body">
+          <div class="frow">
+            <div class="fld" style="max-width:196px"><label>模型</label>
+              <select class="inp"><option>glm-4.6</option><option>glm-4.5-air</option><option>deepseek-chat</option></select>
+            </div>
+            <div class="fld" style="max-width:124px"><label>货币</label>
+              <select class="inp"><option>CNY ¥</option><option>USD $</option></select>
+            </div>
+            <div class="fld"><label>生效日期（按 LOCAL 日历）</label><input class="inp" type="date" value="2026-09-19"></div>
+          </div>
+          <div class="rulecard">
+            <div class="rh"><b>规则一 · 工作日日间</b><span class="tag">时段 0.5h 粒度</span><button class="del">删除规则</button></div>
+            <div class="period"><input class="inp" value="09:00"><span class="arrow">→</span><input class="inp" value="12:30"><button class="del1">✕</button></div>
+            <div class="period"><input class="inp" value="14:00"><span class="arrow">→</span><input class="inp" value="18:00"><button class="del1">✕</button></div>
+            <button class="addrow">＋ 添加时段行</button>
+            <div class="frow" style="margin-top:12px;margin-bottom:0">
+              <div class="fld"><label>星期</label>
+                <div class="chips">
+                  <span class="chip on">一</span><span class="chip on">二</span><span class="chip on">三</span><span class="chip on">四</span><span class="chip on">五</span><span class="chip weekend">六</span><span class="chip weekend">日</span>
+                </div>
+              </div>
+            </div>
+            <div class="prices">
+              <div class="price"><div class="fld"><label>未命中 /1M</label><input class="inp" value="2.5000"></div><div class="u">input_per_1m</div></div>
+              <div class="price"><div class="fld"><label>缓存命中 /1M</label><input class="inp" value="0.2500"></div><div class="u">cache_per_1m</div></div>
+              <div class="price"><div class="fld"><label>输出 /1M</label><input class="inp" value="8.5000"></div><div class="u">output_per_1m</div></div>
+            </div>
+          </div>
+          <div class="rulecard" style="opacity:.58">
+            <div class="rh"><b>规则二 · 闲时</b><span class="tag">次日 00:00 → 08:00</span><button class="del">删除规则</button></div>
+            <div class="prices">
+              <div class="price"><div class="fld"><label>未命中 /1M</label><input class="inp" value="1.2500"></div><div class="u">input_per_1m</div></div>
+              <div class="price"><div class="fld"><label>缓存命中 /1M</label><input class="inp" value="0.1250"></div><div class="u">cache_per_1m</div></div>
+              <div class="price"><div class="fld"><label>输出 /1M</label><input class="inp" value="4.2500"></div><div class="u">output_per_1m</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="dlg-foot">
+          <span class="hint">跨午夜时段按 LOCAL 平移 · 保存前自动备份配置</span>
+          <button class="btn ghost">取消</button>
+          <button class="btn primary">保存并生效</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 03 右键菜单 -->
+<section>
+  <div class="sec-title"><span class="idx">03</span><h2>卡片右键菜单</h2><span class="en">Context Menu</span></div>
+  <div class="frame menuwrap">
+    <div>
+      <div class="menu-caption">模型卡空白区 · 右键</div>
+      <div class="menu">
+        <div class="mi"><span class="ic">A</span>倍率配置…</div>
+        <div class="mi"><span class="ic">B</span>计价配置…</div>
+        <div class="sep"></div>
+        <div class="mi"><span class="ic">C</span>手动补录…</div>
+        <div class="mi"><span class="ic">D</span>操作日志</div>
+        <div class="mi sub"><span class="ic">E</span>导出数据</div>
+        <div class="mi"><span class="ic">F</span>打开配置文件</div>
+        <div class="sep"></div>
+        <div class="mi danger"><span class="ic">!</span>重置今日…</div>
+      </div>
+    </div>
+    <div>
+      <div class="menu-caption">模型名 · 右键</div>
+      <div class="menu submenu">
+        <div class="mi">刷新数据<span class="kb">F5</span></div>
+        <div class="sep"></div>
+        <div class="mi sub">数据范围</div>
+        <div class="mi">本日<span class="ck"></span></div>
+        <div class="mi">本周</div>
+        <div class="mi">近 7 日</div>
+        <div class="mi">本月</div>
+        <div class="mi">上月</div>
+        <div class="mi">本季度</div>
+        <div class="mi">本年</div>
+        <div class="mi">自定义日期…</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 04 托盘菜单 -->
+<section>
+  <div class="sec-title"><span class="idx">04</span><h2>托盘右键菜单</h2><span class="en">Tray Menu / Submenus</span></div>
+  <div class="frame menuwrap">
+    <div>
+      <div class="menu-caption">托盘图标右键 · 主菜单</div>
+      <div class="menu" style="width:242px">
+        <div class="mi dis"><span class="ic">●</span>代理运行中 · 127.0.0.1:8280<span class="st">正常</span></div>
+        <div class="sep"></div>
+        <div class="mi">打开面板</div>
+        <div class="mi">打开配置文件</div>
+        <div class="sep"></div>
+        <div class="mi">倍率配置…</div>
+        <div class="mi">计价配置…</div>
+        <div class="mi sub">统计时区</div>
+        <div class="mi sub">生效日期基准</div>
+        <div class="sep"></div>
+        <div class="mi sub">导出</div>
+        <div class="mi">手动补录…</div>
+        <div class="mi">校准回滚</div>
+        <div class="mi">重载配置</div>
+        <div class="sep"></div>
+        <div class="mi">开机自启<span class="ck"></span></div>
+        <div class="mi sub">悬浮球</div>
+        <div class="mi">导入旧数据…</div>
+        <div class="sep"></div>
+        <div class="mi danger">退出</div>
+      </div>
+    </div>
+    <div>
+      <div class="menu-caption">子菜单 · 统计时区（30 分钟步进）</div>
+      <div class="menu submenu">
+        <div class="mi">UTC−12:00</div>
+        <div class="mi">UTC−09:30</div>
+        <div class="mi">UTC−05:00</div>
+        <div class="mi">UTC+00:00</div>
+        <div class="mi">UTC+05:30</div>
+        <div class="mi">UTC+08:00 · 北京<span class="ck"></span></div>
+        <div class="mi">UTC+09:45</div>
+        <div class="mi">UTC+14:00</div>
+      </div>
+      <div class="menu-caption" style="margin-top:18px">子菜单 · 悬浮球</div>
+      <div class="menu submenu">
+        <div class="mi sub">透明度</div>
+        <div class="mi">40%</div>
+        <div class="mi">60%</div>
+        <div class="mi">80%<span class="ck"></span></div>
+        <div class="mi">100%</div>
+        <div class="sep"></div>
+        <div class="mi">窗口置顶<span class="ck"></span></div>
+      </div>
+    </div>
+    <div>
+      <div class="menu-caption">子菜单 · 导出 / 生效日期基准</div>
+      <div class="menu submenu">
+        <div class="mi">今日</div>
+        <div class="mi">本月</div>
+        <div class="mi">近 7 日</div>
+        <div class="mi">今日小时明细</div>
+        <div class="sep"></div>
+        <div class="mi">打开导出目录</div>
+      </div>
+      <div class="menu submenu" style="margin-top:12px">
+        <div class="mi">UTC（按协调世界时解释）</div>
+        <div class="mi">LOCAL<span class="ck"></span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 05 悬浮球 -->
+<section>
+  <div class="sec-title"><span class="idx">05</span><h2>悬浮指示球 · 两态</h2><span class="en">Floating Ball</span></div>
+  <p class="note">收起态 66px：白盘黑环 + 钴蓝命中弧，中心为浓缩读数；展开态为白底状态条，红色块引导，轮播各模型数据，悬停暂停。右键 = 托盘菜单，双击回主面板。</p>
+  <div class="frame ballwrap">
+    <div class="ballstage">
+      <div class="ball" title="双击展开主面板">
+        <svg width="69" height="69" viewBox="0 0 69 69">
+          <circle cx="34.5" cy="34.5" r="30" fill="none" stroke="#E4E4E0" stroke-width="4"/>
+          <circle cx="34.5" cy="34.5" r="30" fill="none" stroke="#2440C8" stroke-width="4" stroke-dasharray="126.7 61.6"/>
+        </svg>
+        <div class="in"><b>8.6M</b><i>+1.2K</i></div>
+      </div>
+      <div class="ball-tag">收起态 · 66px · 命中弧 67.3%</div>
+    </div>
+    <div class="ballstage" style="width:530px">
+      <div class="pill">
+        <div class="lv">LIVE</div>
+        <div class="win">
+          <div class="mq">
+            <span class="it"><b>GLM-4.6</b><span class="v">8,641,233</span><span class="d">+1,234</span><span class="sep">/</span></span>
+            <span class="it"><b>DEEPSEEK-R</b><span class="v">4,208,556</span><span class="d">+862</span><span class="sep">/</span></span>
+            <span class="it"><b>QWEN3-MAX</b><span class="v">1,984,412</span><span class="d">+318</span><span class="sep">/</span></span>
+            <span class="it"><b>KIMI-K2</b><span class="v">736,209</span><span class="d">+97</span><span class="sep">/</span></span>
+            <span class="it"><b>GLM-4.6</b><span class="v">8,641,233</span><span class="d">+1,234</span><span class="sep">/</span></span>
+            <span class="it"><b>DEEPSEEK-R</b><span class="v">4,208,556</span><span class="d">+862</span><span class="sep">/</span></span>
+            <span class="it"><b>QWEN3-MAX</b><span class="v">1,984,412</span><span class="d">+318</span><span class="sep">/</span></span>
+            <span class="it"><b>KIMI-K2</b><span class="v">736,209</span><span class="d">+97</span><span class="sep">/</span></span>
+          </div>
+        </div>
+        <div class="clk"><b>22:32:07</b><small>LOCAL · UTC 14:32</small></div>
+      </div>
+      <div class="ball-tag">展开态 · 470×54 · 轮播 · 悬停暂停</div>
+    </div>
+  </div>
+</section>
+
+<!-- 06 设计令牌 -->
+<section>
+  <div class="sec-title"><span class="idx">06</span><h2>设计令牌</h2><span class="en">Design Tokens</span></div>
+  <div class="tokgrid">
+    <div class="tokcard">
+      <h4><i>■</i>色彩 Color</h4>
+      <div class="swrow"><span class="sw" style="background:#EDEDEA"></span><span class="nm">底灰 bg</span>#EDEDEA</div>
+      <div class="swrow"><span class="sw" style="background:#FFFFFF"></span><span class="nm">面板白 panel</span>#FFFFFF</div>
+      <div class="swrow"><span class="sw" style="background:#111111"></span><span class="nm">墨黑 ink</span>#111111</div>
+      <div class="swrow"><span class="sw" style="background:#E2231A"></span><span class="nm">瑞士红 brand/danger/M 条</span>#E2231A</div>
+      <div class="swrow"><span class="sw" style="background:#2440C8"></span><span class="nm">钴蓝 data/H 条</span>#2440C8</div>
+      <div class="swrow"><span class="sw" style="background:#1F7A3D"></span><span class="nm">信号绿 success/delta</span>#1F7A3D</div>
+      <div class="swrow"><span class="sw" style="background:#C77800"></span><span class="nm">琥珀 warn</span>#C77800</div>
+      <div class="swrow"><span class="sw" style="background:#D6D6D0"></span><span class="nm">发丝线 hairline</span>#D6D6D0</div>
+    </div>
+    <div class="tokcard">
+      <h4><i>■</i>字体 Type</h4>
+      <div class="type-demo">
+        <div class="s1">瑞士网格 · Grotesk 标题</div>
+        <div class="s2">8,641,233 Segoe UI 800 · 表格数字</div>
+        <div class="s3">正文 12.5px Segoe UI / 微软雅黑 600</div>
+        <div class="s4">辅助 10.5px dim</div>
+        <div class="s5">Micro Label 9px · 字距 0.3em · 全大写</div>
+      </div>
+      <div style="height:10px"></div>
+      <h4><i>■</i>字号阶梯</h4>
+      <div class="toktable">
+        <tr><td>display / 卡片总量</td><td><b>27px</b> · 800 · -.01em</td></tr>
+        <tr><td>title / 面板与对话框</td><td><b>17–20px</b> · 800</td></tr>
+        <tr><td>body / 正文</td><td><b>12–12.5px</b> · 600</td></tr>
+        <tr><td>caption / 数据行</td><td><b>11–12.5px</b> · 700–800</td></tr>
+        <tr><td>micro / 角标</td><td><b>9–10px</b> · 800 · .2–.3em 字距</td></tr>
+      </div>
+    </div>
+    <div class="tokcard">
+      <h4><i>■</i>几何 / 阴影 / 动效</h4>
+      <div class="toktable">
+        <tr><td>间距阶</td><td><b>4 · 8 · 11 · 13 · 16 · 24</b> px，模数网格 25px</td></tr>
+        <tr><td>圆角</td><td><b>0</b>（唯一例外：悬浮球正圆）</td></tr>
+        <tr><td>阴影</td><td>窗内<b>零阴影</b>，仅悬浮物硬投影 offset 6–8px blur 0；分层靠发丝线</td></tr>
+        <tr><td>网格</td><td>卡片 = 网格单元（1px 缝线），选中 = 3px 红顶杠 + 巨型序号水印</td></tr>
+        <tr><td>动效时长</td><td>hover/切换 <b>120ms</b> · 卡片错峰滑入 <b>320ms</b> · 数字滚动 <b>550ms</b></td></tr>
+        <tr><td>缓动</td><td>cubic-bezier(<b>.2,.6,.2,1</b>) 直线感减速，无回弹</td></tr>
+        <tr><td>理念</td><td>错峰滑入（50ms 步进）一次播完即静止；常驻无循环动效，秩序不被打扰</td></tr>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 07 动效演示 -->
+<section>
+  <div class="sec-title"><span class="idx">07</span><h2>动效演示</h2><span class="en">Motion Spec</span></div>
+  <div class="motion">
+    <div class="demo">
+      <h5>实时增量 · 数字滚动 550ms</h5>
+      <div class="big"><span class="cnt" data-v="1234">+0</span></div>
+      <div class="desc">数值快速滚动到位后静止；表格数字保证滚动中宽度不抖。对应 WPF DoubleAnimation + SplineDeceleration。</div>
+      <button class="replay" data-demo="count">重播</button>
+    </div>
+    <div class="demo demoline">
+      <h5>近 7 日折线 · 描边生长 600ms</h5>
+      <svg width="300" height="88" viewBox="0 0 238 90" style="display:block">
+        <polyline id="lineDemo" points="8,65.3 45.3,54.8 82.6,70 119.9,39.5 157.2,29 194.5,48.9 230,6"
+                  fill="none" stroke="#2440C8" stroke-width="2" stroke-linejoin="round"/>
+        <circle id="endDot" cx="230" cy="6" r="3.2" fill="#E2231A"/>
+      </svg>
+      <div class="desc">折线描边生长，终点红点在完成后弹现（scale 0→1）。对应 WPF Path StrokeDashOffset + RenderTransform 缩放。</div>
+      <button class="replay" data-demo="line">重播</button>
+    </div>
+  </div>
+</section>
+
+<footer><span>Token Monitor · UI Sample 3 — Swiss Grid</span><span>信息架构不变 · 视觉 100% 原创 · WPF 可实现性见 README</span></footer>
+
+<script>
+(function(){
+  var seg=document.getElementById('c1seg'), card=document.getElementById('c1'),
+      total=document.getElementById('c1total'), req=document.getElementById('c1req'),
+      tz=document.getElementById('c1tz'), caliber=document.getElementById('tbCaliber');
+  var data={act:{t:'8,641,233',r:'342'},mul:{t:'12,961,850',r:'342'},
+            utc:{t:'7,894,220',r:'291'},utcMul:{t:'11,841,330',r:'291'}};
+  var mode='act',zone='local';
+  function render(){
+    var k=(zone==='utc'?'utc':'')+(mode==='mul'?'Mul':'');
+    total.firstChild.nodeValue=k?data[k].t:data.act.t;
+    req.textContent=k?data[k].r:data.act.r;
+    card.classList.toggle('mul',mode==='mul');
+    card.classList.toggle('tz-utc',zone==='utc');
+    tz.textContent=zone==='utc'?'LOCAL':'UTC';
+    caliber.textContent=zone==='utc'?'UTC 口径':'LOCAL · UTC+8';
+    caliber.classList.toggle('local',zone!=='utc');
+    caliber.classList.toggle('utc',zone==='utc');
+  }
+  seg.addEventListener('click',function(e){
+    if(e.target.tagName!=='BUTTON')return;
+    seg.querySelectorAll('button').forEach(function(b){b.classList.toggle('on',b===e.target)});
+    mode=e.target.dataset.m;render();
+  });
+  tz.addEventListener('click',function(){zone=zone==='local'?'utc':'local';render()});
+})();
+
+(function(){
+  var vals=['09-12 · 3.2M','09-13 · 4.1M','09-14 · 2.8M','09-15 · 5.4M','09-16 · 6.3M','09-17 · 4.6M','09-18 · 8.6M'];
+  var pts=[[8,65.3],[45.3,54.8],[82.6,70],[119.9,39.5],[157.2,29],[194.5,48.9],[230,6]];
+  var g=document.getElementById('dots7'),box=document.getElementById('chart7'),tip=document.getElementById('tip7');
+  pts.forEach(function(p,i){
+    var c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx',p[0]);c.setAttribute('cy',p[1]);c.setAttribute('r',6);
+    c.setAttribute('fill','transparent');c.style.cursor='crosshair';
+    c.addEventListener('mouseenter',function(){
+      tip.innerHTML=vals[i];tip.style.display='block';
+      tip.style.left=Math.min(p[0]*300/238+8,166)+'px';tip.style.top=(p[1]*88/90-24)+'px';
+    });
+    c.addEventListener('mouseleave',function(){tip.style.display='none'});
+    g.appendChild(c);
+  });
+})();
+
+function countUp(el,to){
+  var t0=null;
+  function step(ts){if(!t0)t0=ts;var p=Math.min((ts-t0)/550,1);p=1-Math.pow(1-p,3);
+    el.textContent='+'+Math.round(to*p).toLocaleString('en-US');
+    if(p<1)requestAnimationFrame(step);}
+  requestAnimationFrame(step);
+}
+function drawLine(pl,ms,dot){
+  var L=pl.getTotalLength();pl.style.transition='none';
+  pl.style.strokeDasharray=L;pl.style.strokeDashoffset=L;
+  if(dot)dot.style.transform='scale(0)';
+  pl.getBoundingClientRect();
+  pl.style.transition='stroke-dashoffset '+ms+'ms cubic-bezier(.2,.6,.2,1)';
+  pl.style.strokeDashoffset='0';
+  if(dot)setTimeout(function(){dot.style.transition='transform .18s cubic-bezier(.2,.6,.2,1)';dot.style.transform='scale(1)'},ms);
+}
+document.querySelectorAll('.cnt').forEach(function(el){countUp(el,+el.dataset.v)});
+document.querySelectorAll('[data-demo]').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    if(btn.dataset.demo==='count'){document.querySelectorAll('.demo .cnt').forEach(function(el){countUp(el,+el.dataset.v)})}
+    else{var pl=document.getElementById('lineDemo');drawLine(pl,600,document.getElementById('endDot'))}
+  });
+});
+drawLine(document.getElementById('lineDemo'),800);
+</script>
+</body>
+</html>
