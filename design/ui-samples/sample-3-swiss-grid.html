@@ -40,7 +40,7 @@ section{max-width:1200px;margin:62px auto 0}
 .panel{width:760px;height:560px;flex:0 0 auto;background:var(--panel);border:1px solid var(--rule);border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
 /* 标题栏 */
 .tb{height:48px;flex:0 0 auto;display:flex;align-items:center;border-bottom:1px solid var(--rule)}
-.tb>div{display:flex;align-items:center;gap:9px;padding:0 13px;border-right:1px solid var(--rule)}
+.tb>div{display:flex;align-items:center;align-self:stretch;gap:9px;padding:0 13px;border-right:1px solid var(--rule)}
 .logo .sq{width:15px;height:15px;background:var(--red);border-radius:5px}
 .logo b{font-size:14.5px;font-weight:800;letter-spacing:.01em}
 .logo span{font-size:10px;color:var(--faint);letter-spacing:.16em;font-weight:600}
@@ -212,7 +212,7 @@ section{max-width:1200px;margin:62px auto 0}
 .ball .in i{font-style:normal;font-size:8.5px;font-weight:800;color:var(--grn);display:block;margin-top:3px}
 .ball .in i::before{content:"▲";font-size:6px;margin-right:2px}
 .ball-tag{position:absolute;bottom:8px;left:10px;font-size:9.5px;font-weight:700;color:var(--dim);letter-spacing:.14em;text-transform:uppercase}
-.pill{width:470px;height:54px;background:#fff;border:1.5px solid var(--rule);display:flex;align-items:stretch;padding:0;gap:0;overflow:hidden;box-shadow:6px 7px 0 rgba(17,17,17,.22)}
+.pill{width:470px;height:54px;background:#fff;border:1.5px solid var(--rule);border-radius:16px;display:flex;align-items:stretch;padding:0;gap:0;overflow:hidden;box-shadow:6px 7px 0 rgba(17,17,17,.22)}
 .pill .lv{width:34px;background:var(--red);display:grid;place-items:center;color:#fff;font-size:10px;font-weight:800;letter-spacing:.1em}
 .pill .win{flex:1;overflow:hidden;display:flex;align-items:center;
   -webkit-mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent)}
@@ -230,11 +230,11 @@ section{max-width:1200px;margin:62px auto 0}
 .pill .clk small{font-size:8px;color:var(--faint);letter-spacing:.16em;font-weight:700}
 /* ---------- 设计令牌 ---------- */
 .tokgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px}
-.tokcard{border:1px solid var(--rule);background:#fff;padding:16px}
+.tokcard{border:1px solid var(--rule);border-radius:14px;background:#fff;padding:16px}
 .tokcard h4{font-size:12.5px;font-weight:800;letter-spacing:.16em;border-bottom:2px solid var(--rule);padding-bottom:8px;margin-bottom:12px;text-transform:uppercase}
 .tokcard h4 i{font-style:normal;color:var(--red);margin-right:8px}
 .swrow{display:flex;align-items:center;gap:10px;padding:3.5px 0;font-size:10.5px;font-weight:700;color:var(--dim)}
-.swrow .sw{width:36px;height:19px;border:1px solid rgba(17,17,17,.25)}
+.swrow .sw{width:36px;height:19px;border-radius:6px;border:1px solid rgba(17,17,17,.25)}
 .swrow .nm{color:var(--ink);width:128px;font-size:11px}
 .toktable{width:100%;border-collapse:collapse;font-size:11px}
 .toktable td{padding:4.5px 4px;border-bottom:1px solid var(--hair);color:var(--dim);font-weight:600}
@@ -248,11 +248,11 @@ section{max-width:1200px;margin:62px auto 0}
 .type-demo .s5{font-size:9px;font-weight:800;letter-spacing:.3em;color:var(--faint);text-transform:uppercase}
 /* ---------- 动效演示 ---------- */
 .motion{display:flex;gap:28px;flex-wrap:wrap;align-items:stretch}
-.demo{border:1px solid var(--rule);background:#fff;padding:18px 20px;width:300px;display:flex;flex-direction:column;gap:11px}
+.demo{border:1px solid var(--rule);border-radius:14px;background:#fff;padding:18px 20px;width:300px;display:flex;flex-direction:column;gap:11px}
 .demo h5{font-size:10.5px;font-weight:800;letter-spacing:.18em;color:var(--faint);text-transform:uppercase}
 .demo .big{font-size:34px;font-weight:800;color:var(--grn);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .demo .desc{font-size:11px;color:var(--dim);line-height:1.8;font-weight:600}
-.demo .replay{margin-top:auto;align-self:flex-start;font-family:var(--grot);font-size:11px;font-weight:800;border:1px solid var(--rule);background:#fff;padding:4.5px 15px;cursor:pointer}
+.demo .replay{margin-top:auto;align-self:flex-start;font-family:var(--grot);font-size:11px;font-weight:800;border:1px solid var(--rule);border-radius:9px;background:#fff;padding:4.5px 15px;cursor:pointer}
 .demo .replay:hover{background:var(--ink);color:#fff}
 .demoline{width:360px}
 footer{max-width:1200px;margin:80px auto 0;border-top:4px solid var(--rule);padding-top:13px;font-size:10px;font-weight:800;color:var(--faint);letter-spacing:.22em;display:flex;justify-content:space-between;text-transform:uppercase}
@@ -363,7 +363,7 @@ footer{max-width:1200px;margin:80px auto 0;border-top:4px solid var(--rule);padd
               <div class="ring">
                 <svg width="88" height="88" viewBox="0 0 88 88">
                   <circle cx="44" cy="44" r="37" fill="none" stroke="#E4E4E0" stroke-width="9"/>
-                  <circle cx="44" cy="44" r="37" fill="none" stroke="#2440C8" stroke-width="9" stroke-dasharray="156.3 76"/>
+                  <circle cx="44" cy="44" r="37" fill="none" stroke="#2440C8" stroke-width="9" stroke-linecap="round" stroke-dasharray="156.3 76"/>
                 </svg>
                 <div class="pct"><div>67.3%<small>命中率</small></div></div>
               </div>
@@ -380,7 +380,7 @@ footer{max-width:1200px;margin:80px auto 0;border-top:4px solid var(--rule);padd
               <svg width="238" height="90" viewBox="0 0 238 90">
                 <g stroke="#E4E4E0" stroke-width="1"><line x1="8" y1="72" x2="230" y2="72"/><line x1="8" y1="45" x2="230" y2="45"/><line x1="8" y1="18" x2="230" y2="18"/></g>
                 <polyline id="line7" points="8,65.3 45.3,54.8 82.6,70 119.9,39.5 157.2,29 194.5,48.9 230,6"
-                          fill="none" stroke="#2440C8" stroke-width="2" stroke-linejoin="round"/>
+                          fill="none" stroke="#2440C8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
                 <circle cx="230" cy="6" r="3.2" fill="#E2231A"/>
                 <g id="dots7" fill="#2440C8"></g>
               </svg>
@@ -574,7 +574,7 @@ footer{max-width:1200px;margin:80px auto 0;border-top:4px solid var(--rule);padd
       <div class="ball" title="双击展开主面板">
         <svg width="69" height="69" viewBox="0 0 69 69">
           <circle cx="34.5" cy="34.5" r="30" fill="none" stroke="#E4E4E0" stroke-width="4"/>
-          <circle cx="34.5" cy="34.5" r="30" fill="none" stroke="#2440C8" stroke-width="4" stroke-dasharray="126.7 61.6"/>
+          <circle cx="34.5" cy="34.5" r="30" fill="none" stroke="#2440C8" stroke-width="4" stroke-linecap="round" stroke-dasharray="126.7 61.6"/>
         </svg>
         <div class="in"><b>8.6M</b><i>+1.2K</i></div>
       </div>
@@ -640,7 +640,7 @@ footer{max-width:1200px;margin:80px auto 0;border-top:4px solid var(--rule);padd
       <h4><i>■</i>几何 / 阴影 / 动效</h4>
       <div class="toktable">
         <tr><td>间距阶</td><td><b>4 · 8 · 11 · 13 · 16 · 24</b> px，模数网格 25px</td></tr>
-        <tr><td>圆角</td><td><b>0</b>（唯一例外：悬浮球正圆）</td></tr>
+        <tr><td>圆角</td><td>窗体 <b>16</b> · 卡/对话框/菜单 <b>14</b> · 图表 <b>12</b> · 时钟/费用/按钮 <b>11</b> · 输入/chips/选中按钮 <b>9</b> · 徽章 <b>7</b> · 占比条 <b>pill</b> · 球 <b>50%</b>（大柔角海报；发丝网格线仍为直线但止于圆角边界，勾选符改圆点）</td></tr>
         <tr><td>阴影</td><td>窗内<b>零阴影</b>，仅悬浮物硬投影 offset 6–8px blur 0；分层靠发丝线</td></tr>
         <tr><td>网格</td><td>卡片 = 网格单元（1px 缝线），选中 = 3px 红顶杠 + 巨型序号水印</td></tr>
         <tr><td>动效时长</td><td>hover/切换 <b>120ms</b> · 卡片错峰滑入 <b>320ms</b> · 数字滚动 <b>550ms</b></td></tr>
@@ -665,7 +665,7 @@ footer{max-width:1200px;margin:80px auto 0;border-top:4px solid var(--rule);padd
       <h5>近 7 日折线 · 描边生长 600ms</h5>
       <svg width="300" height="88" viewBox="0 0 238 90" style="display:block">
         <polyline id="lineDemo" points="8,65.3 45.3,54.8 82.6,70 119.9,39.5 157.2,29 194.5,48.9 230,6"
-                  fill="none" stroke="#2440C8" stroke-width="2" stroke-linejoin="round"/>
+                  fill="none" stroke="#2440C8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
         <circle id="endDot" cx="230" cy="6" r="3.2" fill="#E2231A"/>
       </svg>
       <div class="desc">折线描边生长，终点红点在完成后弹现（scale 0→1）。对应 WPF Path StrokeDashOffset + RenderTransform 缩放。</div>
