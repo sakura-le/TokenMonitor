@@ -1,9 +1,17 @@
-﻿<Application x:Class="TokenMonitor.App.App"
+<Application x:Class="TokenMonitor.App.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:TokenMonitor.App"
-             StartupUri="MainWindow.xaml">
+             xmlns:local="clr-namespace:TokenMonitor.App">
     <Application.Resources>
-         
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- 布局常量（StaticResource 可用） -->
+                <ResourceDictionary Source="Themes/Tokens.Shared.xaml"/>
+                <!-- 控件模板骨架（DynamicResource 引用皮肤令牌） -->
+                <ResourceDictionary Source="Themes/Controls.Shared.xaml"/>
+                <!-- 默认皮肤（ThemeService 按持久化 active_skin 运行时替换） -->
+                <ResourceDictionary Source="Themes/Skins/Skin.GraphiteTerminal.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

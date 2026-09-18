@@ -1,0 +1,61 @@
+<dialogs:ShellDialog
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:dialogs="clr-namespace:TokenMonitor.App.Dialogs"
+        x:Class="TokenMonitor.App.Dialogs.ExportDialog"
+        HeaderTag="XLSX" HeaderTitle="导出数据"
+        VersionText="Sheet：UTC总表 / UTC明细表 / LOCAL总表 / LOCAL明细表（+ HOUR用量/HOUR消费）"
+        FooterHint="导出写入 data/export/ · 耗时操作将在后台执行"
+        ConfirmText="开始导出" Width="560">
+    <dialogs:ShellDialog.Content>
+        <StackPanel>
+            <Grid Margin="0,0,0,11">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="190"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="范围预设" Style="{StaticResource Tg.MicroLabel}" Margin="0,0,0,5"/>
+                    <ComboBox Style="{StaticResource Tg.Combo}" x:Name="PresetBox" SelectionChanged="Preset_Changed"/>
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="模型范围" Style="{StaticResource Tg.MicroLabel}" Margin="0,0,0,5"/>
+                    <ComboBox Style="{StaticResource Tg.Combo}" x:Name="ModelBox"/>
+                </StackPanel>
+            </Grid>
+            <Grid Margin="0,0,0,11">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="120"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="起始日期 (YYYY-MM-DD)" Style="{StaticResource Tg.MicroLabel}" Margin="0,0,0,5"/>
+                    <TextBox Style="{StaticResource Tg.Input}" Text="{Binding StartText, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="结束日期" Style="{StaticResource Tg.MicroLabel}" Margin="0,0,0,5"/>
+                    <TextBox Style="{StaticResource Tg.Input}" Text="{Binding EndText, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
+                <StackPanel Grid.Column="4">
+                    <TextBlock Text="口径 SCOPE" Style="{StaticResource Tg.MicroLabel}" Margin="0,0,0,5"/>
+                    <ComboBox Style="{StaticResource Tg.Combo}" x:Name="ScopeBox">
+                        <ComboBoxItem Content="LOCAL" IsSelected="True"/>
+                        <ComboBoxItem Content="UTC"/>
+                    </ComboBox>
+                </StackPanel>
+            </Grid>
+            <CheckBox Content="包含今日小时明细（HOUR用量 / HOUR消费）" IsChecked="{Binding IncludeHourly}"
+                      Foreground="{DynamicResource Tg.Ink.Second}" Margin="0,0,0,10"/>
+            <TextBlock Text="{Binding StatusText}" FontSize="10.5" TextWrapping="Wrap"
+                       Foreground="{DynamicResource Tg.State.Ok}"
+                       Visibility="{Binding StatusText, Converter={StaticResource NullVis}}"/>
+            <TextBlock Text="{Binding ErrorText}" FontSize="10.5" TextWrapping="Wrap"
+                       Foreground="{DynamicResource Tg.State.Danger}"
+                       Visibility="{Binding ErrorText, Converter={StaticResource NullVis}}"/>
+        </StackPanel>
+    </dialogs:ShellDialog.Content>
+</dialogs:ShellDialog>

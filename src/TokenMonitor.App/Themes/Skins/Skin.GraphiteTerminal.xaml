@@ -1,0 +1,119 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!--
+      ============================================================
+      Skin 2 · GraphiteTerminal 石墨终端（深色 · 纯平仪表）【默认皮肤】
+      等宽字形 + 磷绿 + 刻度标尺；1px 描边；唯一循环动效 = 光标闪烁。
+      令牌唯一权威：design/03-ui-spec.md §2.2 / §3.4
+      ============================================================
+    -->
+
+    <sys:String x:Key="Tg.Skin.Name">GraphiteTerminal</sys:String>
+
+    <!-- 背景 -->
+    <SolidColorBrush x:Key="Tg.Bg.Window" Color="#101418"/>
+    <SolidColorBrush x:Key="Tg.Bg.Panel" Color="#1A2025"/>
+    <SolidColorBrush x:Key="Tg.Bg.Card" Color="#202830"/>
+    <SolidColorBrush x:Key="Tg.Bg.CardSel" Color="#1E2620"/>
+    <SolidColorBrush x:Key="Tg.Bg.Inset" Color="#131920"/>
+    <SolidColorBrush x:Key="Tg.Bg.TitleBar" Color="#00101418"/>
+    <SolidColorBrush x:Key="Tg.Bg.Status" Color="#101418"/>
+    <SolidColorBrush x:Key="Tg.Mask" Color="#E0101418"/>
+
+    <!-- 描边 -->
+    <SolidColorBrush x:Key="Tg.Stroke.Strong" Color="#3D4852"/>
+    <SolidColorBrush x:Key="Tg.Stroke.Hair" Color="#2B343C"/>
+    <SolidColorBrush x:Key="Tg.Stroke.Hover" Color="#5A6670"/>
+
+    <!-- 文字 -->
+    <SolidColorBrush x:Key="Tg.Ink.Primary" Color="#D8E0E6"/>
+    <SolidColorBrush x:Key="Tg.Ink.Second" Color="#8B98A2"/>
+    <SolidColorBrush x:Key="Tg.Ink.Faint" Color="#5A6670"/>
+
+    <!-- 强调 -->
+    <SolidColorBrush x:Key="Tg.Accent.Brand" Color="#8FCE58"/>
+    <SolidColorBrush x:Key="Tg.Accent.Soft" Color="#1E2620"/>
+    <SolidColorBrush x:Key="Tg.OnAccent" Color="#10160C"/>
+
+    <!-- 图表 -->
+    <SolidColorBrush x:Key="Tg.Chart.H" Color="#8FCE58"/>
+    <SolidColorBrush x:Key="Tg.Chart.M" Color="#E0685A"/>
+    <SolidColorBrush x:Key="Tg.Chart.O" Color="#5E9FC4"/>
+    <SolidColorBrush x:Key="Tg.Chart.Line" Color="#8FCE58"/>
+    <SolidColorBrush x:Key="Tg.Chart.LineDot" Color="#8FCE58"/>
+    <SolidColorBrush x:Key="Tg.Chart.Grid" Color="#1C242B"/>
+    <SolidColorBrush x:Key="Tg.Ring.Stroke" Color="#8FCE58"/>
+    <SolidColorBrush x:Key="Tg.Ring.Track" Color="#232C33"/>
+
+    <!-- 语义色 -->
+    <SolidColorBrush x:Key="Tg.State.Danger" Color="#E0685A"/>
+    <SolidColorBrush x:Key="Tg.State.Warn" Color="#D9A441"/>
+    <SolidColorBrush x:Key="Tg.WarnInk" Color="#D9A441"/>
+    <SolidColorBrush x:Key="Tg.State.Ok" Color="#8FCE58"/>
+    <SolidColorBrush x:Key="Tg.State.Info" Color="#5E9FC4"/>
+
+    <!-- 漏抓横幅 -->
+    <SolidColorBrush x:Key="Tg.Banner.Bg" Color="#241A18"/>
+    <SolidColorBrush x:Key="Tg.Banner.Stroke" Color="#4A2E29"/>
+    <SolidColorBrush x:Key="Tg.Banner.Ink" Color="#EAB4AB"/>
+    <SolidColorBrush x:Key="Tg.Banner.TagInk" Color="#14100F"/>
+
+    <!-- 提供商徽章 -->
+    <SolidColorBrush x:Key="Tg.Provider.Glm" Color="#D8E0E6"/>
+    <SolidColorBrush x:Key="Tg.Provider.DeepSeek" Color="#5E9FC4"/>
+    <SolidColorBrush x:Key="Tg.Provider.Qwen" Color="#A99BD6"/>
+    <SolidColorBrush x:Key="Tg.Provider.Default" Color="#8FCE58"/>
+
+    <!-- 圆角阶梯：窗体12 / 卡7 / 菜单9 / 对话框10 / 控件5 / 徽章5 / 占比条3（描边一律圆头线帽） -->
+    <CornerRadius x:Key="Tg.Radius.Window">12</CornerRadius>
+    <CornerRadius x:Key="Tg.Radius.Card">7</CornerRadius>
+    <CornerRadius x:Key="Tg.Radius.Menu">9</CornerRadius>
+    <CornerRadius x:Key="Tg.Radius.Dialog">10</CornerRadius>
+    <CornerRadius x:Key="Tg.Radius.Control">5</CornerRadius>
+    <CornerRadius x:Key="Tg.Radius.Badge">5</CornerRadius>
+    <CornerRadius x:Key="Tg.Radius.Bar">3</CornerRadius>
+    <CornerRadius x:Key="Tg.Radius.Pill">999</CornerRadius>
+
+    <!-- 描边粗细 -->
+    <Thickness x:Key="Tg.Window.BorderThickness">1</Thickness>
+    <Thickness x:Key="Tg.Card.BorderThickness">1</Thickness>
+
+    <!-- 字体栈（全等宽，中文回退雅黑） -->
+    <FontFamily x:Key="Tg.Font.Display">Cascadia Mono, Consolas, Microsoft YaHei UI</FontFamily>
+    <FontFamily x:Key="Tg.Font.Num">Cascadia Mono, Consolas, Microsoft YaHei UI</FontFamily>
+    <FontFamily x:Key="Tg.Font.Body">Cascadia Mono, Consolas, Microsoft YaHei</FontFamily>
+
+    <!-- 纹理：条内竖刻纹 / 28px 面板网格（S2 专属质感） -->
+    <DrawingBrush x:Key="Tg.Texture.Bars" TileMode="Tile" Viewport="0,0,8,7" ViewportUnits="Absolute">
+        <DrawingBrush.Drawing>
+            <GeometryDrawing Geometry="M0,0 L1,0 L1,7 L0,7 Z" Brush="#0DD8E0E6"/>
+        </DrawingBrush.Drawing>
+    </DrawingBrush>
+    <DrawingBrush x:Key="Tg.Texture.Banner">
+        <DrawingBrush.Drawing>
+            <GeometryDrawing Geometry="M0,0 L28,0 L28,28 L0,28 Z" Brush="#00FFFFFF"/>
+        </DrawingBrush.Drawing>
+    </DrawingBrush>
+    <DrawingBrush x:Key="Tg.Texture.Grid" TileMode="Tile" Viewport="0,0,28,28" ViewportUnits="Absolute">
+        <DrawingBrush.Drawing>
+            <GeometryDrawing Geometry="M0,0 L28,0 L28,0.5 L0,0.5 Z M0,0 L0,28 L0.5,28 L0.5,0 Z" Brush="#06D8E0E6"/>
+        </DrawingBrush.Drawing>
+    </DrawingBrush>
+
+    <!-- 倍率徽章（S2 磷绿虚线） -->
+    <SolidColorBrush x:Key="Tg.MulChip.Border" Color="#8FCE58"/>
+    <SolidColorBrush x:Key="Tg.MulChip.Bg" Color="#00FFFFFF"/>
+    <SolidColorBrush x:Key="Tg.MulChip.Ink" Color="#8FCE58"/>
+    <DoubleCollection x:Key="Tg.MulChip.Dash">3,2</DoubleCollection>
+
+    <!-- 阴影（§3.4：S2 窗体 Blur 26 · Depth 10 · 黑 .5） -->
+    <DropShadowEffect x:Key="Tg.Shadow.Window" x:Shared="False"
+                      BlurRadius="26" ShadowDepth="10" Direction="270" Color="#000000" Opacity="0.5"/>
+    <DropShadowEffect x:Key="Tg.Shadow.Float" x:Shared="False"
+                      BlurRadius="26" ShadowDepth="10" Direction="270" Color="#000000" Opacity="0.5"/>
+    <DropShadowEffect x:Key="Tg.Shadow.Env" x:Shared="False"
+                      BlurRadius="0" ShadowDepth="0" Direction="270" Color="#000000" Opacity="0"/>
+
+</ResourceDictionary>

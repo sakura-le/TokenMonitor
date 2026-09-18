@@ -1,0 +1,58 @@
+<dialogs:ShellDialog
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:dialogs="clr-namespace:TokenMonitor.App.Dialogs"
+        x:Class="TokenMonitor.App.Dialogs.ManualCalibrateDialog"
+        HeaderTag="FIX" HeaderTitle="手动补录" ModelTag="{Binding ChosenModel}"
+        VersionText="补录将自动备份 → 插入估算行(estimated) → 清理该模型漏抓 → 重算今日"
+        FooterHint="总量均分为 N 笔（余数入最后一笔）· prompt = hit + miss · total = prompt + output"
+        ConfirmText="补录并生效" Width="540">
+    <dialogs:ShellDialog.Content>
+        <StackPanel>
+            <Grid Margin="0,0,0,11">
+                <TextBlock Text="模型 MODEL" Style="{StaticResource Tg.MicroLabel}" Margin="0,0,0,5"/>
+                <ComboBox Style="{StaticResource Tg.Combo}" ItemsSource="{Binding ModelKeys}"
+                          SelectedItem="{Binding ChosenModel}" Margin="0,17,0,0"/>
+            </Grid>
+            <Grid Margin="0,0,0,11">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="笔数 COUNT" Style="{StaticResource Tg.MicroLabel}" Margin="0,0,0,5"/>
+                    <TextBox Style="{StaticResource Tg.Input}" Text="{Binding CountText, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="输出 TOKEN OUTPUT" Style="{StaticResource Tg.MicroLabel}" Margin="0,0,0,5"/>
+                    <TextBox Style="{StaticResource Tg.Input}" Text="{Binding OutputText, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
+            </Grid>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="缓存命中 HIT" Style="{StaticResource Tg.MicroLabel}" Margin="0,0,0,5"/>
+                    <TextBox Style="{StaticResource Tg.Input}" Text="{Binding HitText, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="未命中 MISS" Style="{StaticResource Tg.MicroLabel}" Margin="0,0,0,5"/>
+                    <TextBox Style="{StaticResource Tg.Input}" Text="{Binding MissText, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
+                <StackPanel Grid.Column="4">
+                    <TextBlock Text="合计 TOTAL（只读）" Style="{StaticResource Tg.MicroLabel}" Margin="0,0,0,5"/>
+                    <TextBox Style="{StaticResource Tg.Input}" Text="{Binding TotalText, Mode=OneWay}" IsReadOnly="True"/>
+                </StackPanel>
+            </Grid>
+            <TextBlock Text="{Binding ErrorText}" Foreground="{DynamicResource Tg.State.Danger}" FontSize="10.5"
+                       Margin="0,10,0,0" TextWrapping="Wrap"
+                       Visibility="{Binding ErrorText, Converter={StaticResource NullVis}}"/>
+        </StackPanel>
+    </dialogs:ShellDialog.Content>
+</dialogs:ShellDialog>

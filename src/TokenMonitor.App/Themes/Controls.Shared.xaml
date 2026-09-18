@@ -1,0 +1,1192 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib"
+                    xmlns:controls="clr-namespace:TokenMonitor.App.Controls"
+                    xmlns:dialogs="clr-namespace:TokenMonitor.App.Dialogs"
+                    xmlns:infra="clr-namespace:TokenMonitor.App.Infrastructure">
+
+    <!--
+      ============================================================
+      Controls.Shared —— 控件模板骨架（03-ui-spec §3.1）
+      结构与几何在此；皮肤相关值一律 DynamicResource；
+      布局常量来自 Tokens.Shared（StaticResource）。
+      禁止在此缓存/定义皮肤色；禁止 Storyboard 动画 DynamicResource 目标值。
+      ============================================================
+    -->
+
+    <!-- ============ 基础转换器 ============ -->
+    <infra:MultiplyConverter x:Key="MulConv"/>
+    <infra:BoolToVisibilityConverter x:Key="BoolVis"/>
+    <infra:BoolToVisibilityConverter x:Key="BoolVisInv" Invert="True"/>
+    <infra:NullToVisibilityConverter x:Key="NullVis"/>
+    <infra:PositiveToVisibilityConverter x:Key="PosVis"/>
+    <infra:WidthToColumnsConverter x:Key="WidthCols"/>
+    <infra:EnumEqualsConverter x:Key="EnumEquals"/>
+
+    <!-- ============ 文本基础 ============ -->
+    <Style x:Key="Tg.MicroLabel" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{DynamicResource Tg.Font.Num}"/>
+        <Setter Property="FontSize" Value="{StaticResource Tg.Fs.Micro}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Tg.Ink.Faint}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style x:Key="Tg.NumText" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{DynamicResource Tg.Font.Num}"/>
+        <Setter Property="Typography.NumeralAlignment" Value="Tabular"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <!-- ============ 徽章族（C-14） ============ -->
+    <Style x:Key="Tg.Badge" TargetType="Border">
+        <Setter Property="CornerRadius" Value="{DynamicResource Tg.Radius.Badge}"/>
+        <Setter Property="Padding" Value="6,2"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style x:Key="Tg.ProviderBadge" TargetType="Border" BasedOn="{StaticResource Tg.Badge}">
+        <Setter Property="Background" Value="{DynamicResource Tg.Bg.Inset}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Tg.Stroke.Strong}"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding ProviderKind, RelativeSource={RelativeSource AncestorType=controls:ModelCard}}" Value="Glm">
+                <Setter Property="BorderBrush" Value="{DynamicResource Tg.Provider.Glm}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding ProviderKind, RelativeSource={RelativeSource AncestorType=controls:ModelCard}}" Value="DeepSeek">
+                <Setter Property="BorderBrush" Value="{DynamicResource Tg.Provider.DeepSeek}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding ProviderKind, RelativeSource={RelativeSource AncestorType=controls:ModelCard}}" Value="Qwen">
+                <Setter Property="BorderBrush" Value="{DynamicResource Tg.Provider.Qwen}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding ProviderKind, RelativeSource={RelativeSource AncestorType=controls:ModelCard}}" Value="Default">
+                <Setter Property="BorderBrush" Value="{DynamicResource Tg.Provider.Default}"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="Tg.ProviderBadgeText" TargetType="TextBlock" BasedOn="{StaticResource Tg.MicroLabel}">
+        <Setter Property="Foreground" Value="{DynamicResource Tg.Ink.Second}"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding ProviderKind, RelativeSource={RelativeSource AncestorType=controls:ModelCard}}" Value="Glm">
+                <Setter Property="Foreground" Value="{DynamicResource Tg.Provider.Glm}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding ProviderKind, RelativeSource={RelativeSource AncestorType=controls:ModelCard}}" Value="DeepSeek">
+                <Setter Property="Foreground" Value="{DynamicResource Tg.Provider.DeepSeek}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding ProviderKind, RelativeSource={RelativeSource AncestorType=controls:ModelCard}}" Value="Qwen">
+                <Setter Property="Foreground" Value="{DynamicResource Tg.Provider.Qwen}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding ProviderKind, RelativeSource={RelativeSource AncestorType=controls:ModelCard}}" Value="Default">
+                <Setter Property="Foreground" Value="{DynamicResource Tg.Provider.Default}"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- ============ 按钮 ============ -->
+    <Style x:Key="Tg.Btn" TargetType="Button">
+        <Setter Property="FontFamily" Value="{DynamicResource Tg.Font.Num}"/>
+        <Setter Property="FontSize" Value="{StaticResource Tg.Fs.Data}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Tg.Ink.Second}"/>
+        <Setter Property="Background" Value="{DynamicResource Tg.Bg.Inset}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Tg.Stroke.Strong}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="9,4"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="bd" CornerRadius="{DynamicResource Tg.Radius.Control}"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                          RecognizesAccessKey="True"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="BorderBrush" Value="{DynamicResource Tg.Stroke.Hover}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource Tg.Ink.Primary}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource Tg.Bg.CardSel}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.4"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="Tg.PrimaryButton" TargetType="Button" BasedOn="{StaticResource Tg.Btn}">
+        <Setter Property="Background" Value="{DynamicResource Tg.Accent.Brand}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Tg.OnAccent}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Tg.Accent.Brand}"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Padding" Value="20,6"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="bd" CornerRadius="{DynamicResource Tg.Radius.Control}"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Opacity" Value="0.88"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.4"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="Tg.DangerButton" TargetType="Button" BasedOn="{StaticResource Tg.Btn}">
+        <Setter Property="Foreground" Value="{DynamicResource Tg.State.Danger}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Tg.State.Danger}"/>
+        <Setter Property="Background" Value="{DynamicResource Tg.Bg.Panel}"/>
+    </Style>
+    <Style x:Key="Tg.LinkButton" TargetType="Button" BasedOn="{StaticResource Tg.Btn}">
+        <Setter Property="Foreground" Value="{DynamicResource Tg.Banner.Ink}"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Tg.Banner.Stroke}"/>
+        <Setter Property="Padding" Value="10,2"/>
+    </Style>
+
+    <!-- 置顶/收起等标题栏小按钮（ToggleButton） -->
+    <Style x:Key="Tg.ChromeToggle" TargetType="ToggleButton">
+        <Setter Property="FontFamily" Value="{DynamicResource Tg.Font.Num}"/>
+        <Setter Property="FontSize" Value="{StaticResource Tg.Fs.Data}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Tg.Ink.Second}"/>
+        <Setter Property="Background" Value="{DynamicResource Tg.Bg.Inset}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Tg.Stroke.Strong}"/>
+        <Setter Property="Padding" Value="9,4"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border x:Name="bd" CornerRadius="{DynamicResource Tg.Radius.Control}"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="1" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="BorderBrush" Value="{DynamicResource Tg.Stroke.Hover}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource Tg.Ink.Primary}"/>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource Tg.Accent.Soft}"/>
+                            <Setter Property="BorderBrush" Value="{DynamicResource Tg.Accent.Brand}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource Tg.Accent.Brand}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ============ 透明度滑杆 ============ -->
+    <Style x:Key="Tg.SliderThumb" TargetType="Thumb">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Border Width="9" Height="13" CornerRadius="{DynamicResource Tg.Radius.Control}"
+                            Background="{DynamicResource Tg.Accent.Brand}"
+                            BorderBrush="{DynamicResource Tg.OnAccent}" BorderThickness="1"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="Tg.Slider" TargetType="Slider">
+        <Setter Property="Height" Value="14"/>
+        <Setter Property="Minimum" Value="0.6"/>
+        <Setter Property="Maximum" Value="1.0"/>
+        <Setter Property="IsMoveToPointEnabled" Value="True"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Slider">
+                    <Grid Background="Transparent" VerticalAlignment="Center">
+                        <Border Height="3" CornerRadius="2" Background="{DynamicResource Tg.Bg.Inset}"
+                                BorderBrush="{DynamicResource Tg.Stroke.Hair}" BorderThickness="1"
+                                VerticalAlignment="Center"/>
+                        <Track x:Name="PART_Track">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Command="Slider.DecreaseLarge" Focusable="False">
+                                    <RepeatButton.Template>
+                                        <ControlTemplate TargetType="RepeatButton">
+                                            <Border Height="3" Background="Transparent" CornerRadius="2"/>
+                                        </ControlTemplate>
+                                    </RepeatButton.Template>
+                                </RepeatButton>
+                            </Track.DecreaseRepeatButton>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Command="Slider.IncreaseLarge" Focusable="False">
+                                    <RepeatButton.Template>
+                                        <ControlTemplate TargetType="RepeatButton">
+                                            <Border Height="3" Background="Transparent" CornerRadius="2"/>
+                                        </ControlTemplate>
+                                    </RepeatButton.Template>
+                                </RepeatButton>
+                            </Track.IncreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb Style="{StaticResource Tg.SliderThumb}"/>
+                            </Track.Thumb>
+                        </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ============ 输入 ============ -->
+    <Style x:Key="Tg.Input" TargetType="TextBox">
+        <Setter Property="FontFamily" Value="{DynamicResource Tg.Font.Num}"/>
+        <Setter Property="FontSize" Value="{StaticResource Tg.Fs.Body}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Tg.Ink.Primary}"/>
+        <Setter Property="Background" Value="{DynamicResource Tg.Bg.Inset}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Tg.Stroke.Strong}"/>
+        <Setter Property="CaretBrush" Value="{DynamicResource Tg.Accent.Brand}"/>
+        <Setter Property="SelectionBrush" Value="{DynamicResource Tg.Accent.Brand}"/>
+        <Setter Property="Padding" Value="8,5"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border x:Name="bd" CornerRadius="{DynamicResource Tg.Radius.Control}"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            SnapsToDevicePixels="True">
+                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"
+                                      VerticalAlignment="Center" Focusable="False"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter Property="BorderBrush" Value="{DynamicResource Tg.Accent.Brand}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.4"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ComboBox（紧凑模板） -->
+    <Style x:Key="Tg.ComboItem" TargetType="ComboBoxItem">
+        <Setter Property="Foreground" Value="{DynamicResource Tg.Ink.Primary}"/>
+        <Setter Property="FontFamily" Value="{DynamicResource Tg.Font.Body}"/>
+        <Setter Property="FontSize" Value="{StaticResource Tg.Fs.Body}"/>
+        <Setter Property="Padding" Value="9,5"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBoxItem">
+                    <Border x:Name="bd" Background="Transparent" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource Tg.Accent.Soft}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="Tg.Combo" TargetType="ComboBox">
+        <Setter Property="FontFamily" Value="{DynamicResource Tg.Font.Num}"/>
+        <Setter Property="FontSize" Value="{StaticResource Tg.Fs.Body}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Tg.Ink.Primary}"/>
+        <Setter Property="Background" Value="{DynamicResource Tg.Bg.Inset}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Tg.Stroke.Strong}"/>
+        <Setter Property="Padding" Value="8,5"/>
+        <Setter Property="ItemContainerStyle" Value="{StaticResource Tg.ComboItem}"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBox">
+                    <Grid>
+                        <Border x:Name="bd" CornerRadius="{DynamicResource Tg.Radius.Control}"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1">
+                            <Grid>
+                                <ContentPresenter Content="{TemplateBinding SelectionBoxItem}"
+                                                  ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"
+                                                  Margin="{TemplateBinding Padding}"
+                                                  VerticalAlignment="Center"
+                                                  TextElement.FontFamily="{TemplateBinding FontFamily}"
+                                                  TextElement.Foreground="{TemplateBinding Foreground}"
+                                                  IsHitTestVisible="False"/>
+                                <Path Data="M 0 0 L 4 4 L 8 0" Stroke="{DynamicResource Tg.Ink.Second}"
+                                      StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                      HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            </Grid>
+                        </Border>
+                        <Popup x:Name="PART_Popup" IsOpen="{TemplateBinding IsDropDownOpen}"
+                               AllowsTransparency="True" Placement="Bottom" PopupAnimation="Fade">
+                            <Border Background="{DynamicResource Tg.Bg.Panel}"
+                                    BorderBrush="{DynamicResource Tg.Stroke.Strong}" BorderThickness="1"
+                                    CornerRadius="{DynamicResource Tg.Radius.Control}"
+                                    Margin="0,3,8,8" MinWidth="{TemplateBinding ActualWidth}"
+                                    MaxHeight="240" Effect="{DynamicResource Tg.Shadow.Float}">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <ItemsPresenter/>
+                                </ScrollViewer>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsDropDownOpen" Value="True">
+                            <Setter Property="BorderBrush" Value="{DynamicResource Tg.Accent.Brand}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.4"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ============ Tooltip ============ -->
+    <Style TargetType="ToolTip">
+        <Setter Property="Background" Value="{DynamicResource Tg.Bg.Panel}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Tg.Ink.Primary}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Tg.Stroke.Strong}"/>
+        <Setter Property="FontFamily" Value="{DynamicResource Tg.Font.Body}"/>
+        <Setter Property="FontSize" Value="{StaticResource Tg.Fs.Data}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToolTip">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="1" CornerRadius="{DynamicResource Tg.Radius.Control}"
+                            Padding="8,4" Effect="{DynamicResource Tg.Shadow.Float}">
+                        <ContentPresenter/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ============ 右键菜单（三层 + 托盘共用） ============ -->
+    <Style x:Key="Tg.MenuSeparator" TargetType="Separator">
+        <Setter Property="Background" Value="{DynamicResource Tg.Stroke.Hair}"/>
+        <Setter Property="Height" Value="1"/>
+        <Setter Property="Margin" Value="8,4"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Separator">
+                    <Border Background="{TemplateBinding Background}" Height="1"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="Tg.MenuItem" TargetType="MenuItem">
+        <Setter Property="Foreground" Value="{DynamicResource Tg.Ink.Primary}"/>
+        <Setter Property="FontFamily" Value="{DynamicResource Tg.Font.Body}"/>
+        <Setter Property="FontSize" Value="{StaticResource Tg.Fs.Body}"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="MenuItem">
+                    <Border x:Name="bd" Background="{TemplateBinding Background}"
+                            CornerRadius="{DynamicResource Tg.Radius.Control}" Margin="2,1"
+                            Padding="10,5">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="check" Grid.Column="0" Text="●" FontSize="8"
+                                       Visibility="Collapsed" Margin="0,0,6,1"
+                                       Foreground="{DynamicResource Tg.Accent.Brand}"
+                                       VerticalAlignment="Center"/>
+                            <ContentPresenter Grid.Column="1" ContentSource="Header"
+                                              VerticalAlignment="Center"
+                                              RecognizesAccessKey="True"/>
+                            <TextBlock x:Name="arrow" Grid.Column="2" Text="▸" Margin="14,0,0,0"
+                                       FontSize="9" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource Tg.Ink.Faint}"
+                                       Visibility="Collapsed"/>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="Role" Value="SubmenuHeader">
+                            <Setter TargetName="arrow" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="check" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{DynamicResource Tg.Accent.Soft}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{DynamicResource Tg.Ink.Faint}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="Tg.MenuItemDanger" TargetType="MenuItem" BasedOn="{StaticResource Tg.MenuItem}">
+        <Setter Property="Foreground" Value="{DynamicResource Tg.State.Danger}"/>
+    </Style>
+    <Style TargetType="ContextMenu">
+        <Setter Property="Background" Value="{DynamicResource Tg.Bg.Panel}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Tg.Stroke.Strong}"/>
+        <Setter Property="FontFamily" Value="{DynamicResource Tg.Font.Body}"/>
+        <Setter Property="FontSize" Value="{StaticResource Tg.Fs.Body}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContextMenu">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
+                            CornerRadius="{DynamicResource Tg.Radius.Menu}"
+                            Padding="4" Effect="{DynamicResource Tg.Shadow.Float}"
+                            SnapsToDevicePixels="True">
+                        <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ============ 细滚动条 ============ -->
+    <Style TargetType="ScrollBar">
+        <Setter Property="Width" Value="6"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ScrollBar">
+                    <Grid Background="{TemplateBinding Background}">
+                        <Track x:Name="PART_Track" IsDirectionReversed="True">
+                            <Track.Thumb>
+                                <Thumb>
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="Thumb">
+                                            <Border CornerRadius="3" Background="{DynamicResource Tg.Ink.Faint}"
+                                                    Opacity="0.55" Margin="1"/>
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
+                            </Track.Thumb>
+                        </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="Orientation" Value="Horizontal">
+                <Setter Property="Width" Value="Auto"/>
+                <Setter Property="Height" Value="6"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- ============ C-04 RatioBar ============ -->
+    <Style TargetType="controls:RatioBar">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="controls:RatioBar">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="34"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="42"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{TemplateBinding Label}"
+                                   Style="{StaticResource Tg.MicroLabel}"/>
+                        <Grid Grid.Column="1" x:Name="PART_Track" Height="7"
+                              VerticalAlignment="Center" ClipToBounds="True" Margin="0,0,7,0">
+                            <Border CornerRadius="{DynamicResource Tg.Radius.Bar}"
+                                    Background="{DynamicResource Tg.Bg.Inset}"
+                                    BorderBrush="{DynamicResource Tg.Stroke.Hair}" BorderThickness="1"/>
+                            <!-- S2 竖刻纹 / S4 刻纹：Tg.Texture.Bars DrawingBrush -->
+                            <Rectangle Fill="{DynamicResource Tg.Texture.Bars}"/>
+                            <Border x:Name="PART_Fill" HorizontalAlignment="Left"
+                                    CornerRadius="{DynamicResource Tg.Radius.Bar}"
+                                    Background="{DynamicResource Tg.Chart.H}"/>
+                        </Grid>
+                        <TextBlock Grid.Column="2" Text="{TemplateBinding ValueText}"
+                                   Style="{StaticResource Tg.NumText}"
+                                   FontSize="{StaticResource Tg.Fs.Micro}" TextAlignment="Right"
+                                   Foreground="{DynamicResource Tg.Ink.Primary}"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="Kind" Value="Miss">
+                            <Setter TargetName="PART_Fill" Property="Background"
+                                    Value="{DynamicResource Tg.Chart.M}"/>
+                        </Trigger>
+                        <Trigger Property="Kind" Value="Output">
+                            <Setter TargetName="PART_Fill" Property="Background"
+                                    Value="{DynamicResource Tg.Chart.O}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ============ C-05 RingGauge ============ -->
+    <Style TargetType="controls:RingGauge">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="controls:RingGauge">
+                    <Viewbox Stretch="Uniform" Width="{TemplateBinding Width}" Height="{TemplateBinding Height}">
+                        <Grid Width="88" Height="88">
+                            <!-- S4 雷达底层：同心环 + 十字线 + 扫描扇（6s Linear 永动, Op .28） -->
+                            <Grid Visibility="{Binding IsRadarSkin, Source={x:Static infra:SkinFlags.Instance}, Converter={StaticResource BoolVis}}">
+                                <Ellipse Stroke="#1E10304F" StrokeThickness="1"/>
+                                <Ellipse Width="36" Height="36" Stroke="#2410304F" StrokeThickness="1"/>
+                                <Line X1="4" Y1="44" X2="84" Y2="44" Stroke="#1F10304F" StrokeThickness="1"/>
+                                <Line X1="44" Y1="4" X2="44" Y2="84" Stroke="#1F10304F" StrokeThickness="1"/>
+                                <Path Fill="{DynamicResource Tg.Ring.Stroke}" Opacity="0.28"
+                                      Data="M 44 44 L 44 8 A 36 36 0 0 1 67.09 13.91 Z">
+                                    <Path.RenderTransform>
+                                        <RotateTransform x:Name="radarAngle" CenterX="44" CenterY="44" Angle="0"/>
+                                    </Path.RenderTransform>
+                                </Path>
+                            </Grid>
+                            <!-- 底轨 -->
+                            <Ellipse Stroke="{DynamicResource Tg.Ring.Track}" StrokeThickness="7"/>
+                            <!-- S2 外圈虚线刻度圆 -->
+                            <Ellipse Width="80" Height="80" Stroke="{DynamicResource Tg.Chart.Grid}"
+                                     StrokeThickness="1" StrokeDashArray="1 5"
+                                     Visibility="{Binding IsTerminalSkin, Source={x:Static infra:SkinFlags.Instance}, Converter={StaticResource BoolVis}}"/>
+                            <!-- 命中弧 -->
+                            <Path x:Name="PART_Progress" Stroke="{DynamicResource Tg.Ring.Stroke}"
+                                  StrokeThickness="7" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                            <!-- 中央 % -->
+                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                <TextBlock Text="{TemplateBinding PercentText}" TextAlignment="Center"
+                                           FontFamily="{DynamicResource Tg.Font.Num}"
+                                           Typography.NumeralAlignment="Tabular"
+                                           FontSize="16" FontWeight="Bold"
+                                           Foreground="{DynamicResource Tg.Ink.Primary}"/>
+                                <TextBlock Text="{TemplateBinding Caption}" TextAlignment="Center"
+                                           FontFamily="{DynamicResource Tg.Font.Num}"
+                                           FontSize="7.5" Foreground="{DynamicResource Tg.Ink.Faint}"/>
+                            </StackPanel>
+                        </Grid>
+                    </Viewbox>
+                    <ControlTemplate.Triggers>
+                        <!-- S4 激增 → 雷达 2.5s；常态 6s（§5 映射） -->
+                        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                            <BeginStoryboard x:Name="radarSlow" HandoffBehavior="SnapshotAndReplace">
+                                <Storyboard RepeatBehavior="Forever">
+                                    <DoubleAnimation Storyboard.TargetName="radarAngle"
+                                                     Storyboard.TargetProperty="Angle"
+                                                     From="0" To="360" Duration="0:0:6"/>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                        <DataTrigger Binding="{Binding SurgeRadar, Source={x:Static infra:SkinFlags.Instance}}" Value="True">
+                            <DataTrigger.EnterActions>
+                                <BeginStoryboard HandoffBehavior="SnapshotAndReplace">
+                                    <Storyboard RepeatBehavior="Forever">
+                                        <DoubleAnimation Storyboard.TargetName="radarAngle"
+                                                         Storyboard.TargetProperty="Angle"
+                                                         From="0" To="360" Duration="0:0:2.5"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.EnterActions>
+                            <DataTrigger.ExitActions>
+                                <BeginStoryboard HandoffBehavior="SnapshotAndReplace">
+                                    <Storyboard RepeatBehavior="Forever">
+                                        <DoubleAnimation Storyboard.TargetName="radarAngle"
+                                                         Storyboard.TargetProperty="Angle"
+                                                         From="0" To="360" Duration="0:0:6"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.ExitActions>
+                        </DataTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ============ C-02 MissedBanner ============ -->
+    <Style TargetType="controls:MissedBanner">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="controls:MissedBanner">
+                    <Border CornerRadius="{DynamicResource Tg.Radius.Control}"
+                            Background="{DynamicResource Tg.Banner.Bg}"
+                            BorderBrush="{DynamicResource Tg.Banner.Stroke}" BorderThickness="1,1,1,1"
+                            Padding="0">
+                        <Grid>
+                            <!-- S4 警戒斜纹（135° DrawingBrush，静态） -->
+                            <Rectangle Fill="{DynamicResource Tg.Texture.Banner}"
+                                       Visibility="{Binding IsSkySkin, Source={x:Static infra:SkinFlags.Instance}, Converter={StaticResource BoolVis}}"/>
+                            <Border BorderBrush="{DynamicResource Tg.State.Danger}" BorderThickness="3,0,0,0"
+                                    CornerRadius="3,0,0,3"/>
+                            <StackPanel Orientation="Horizontal" Margin="10,0,8,0" VerticalAlignment="Center">
+                                <Border Background="{DynamicResource Tg.State.Danger}"
+                                        CornerRadius="{DynamicResource Tg.Radius.Badge}" Padding="7,1">
+                                    <TextBlock Text="漏抓" FontSize="10.5" FontWeight="Bold"
+                                               FontFamily="{DynamicResource Tg.Font.Body}"
+                                               Foreground="{DynamicResource Tg.Banner.TagInk}"/>
+                                </Border>
+                                <TextBlock Text="{TemplateBinding Text}" Margin="10,0,0,0"
+                                           FontSize="12" VerticalAlignment="Center"
+                                           FontFamily="{DynamicResource Tg.Font.Body}"
+                                           Foreground="{DynamicResource Tg.Banner.Ink}"/>
+                                <Button Command="{TemplateBinding GoCommand}" Content="去补录"
+                                        Style="{StaticResource Tg.LinkButton}" Margin="12,0,0,0"/>
+                                <Button Command="{TemplateBinding CloseCommand}" Content="✕"
+                                        Style="{StaticResource Tg.LinkButton}" Margin="6,0,0,0"
+                                        BorderThickness="0" Padding="6,2"
+                                        Foreground="{DynamicResource Tg.Ink.Faint}"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ============ C-09 DualClock ============ -->
+    <Style TargetType="controls:DualClockControl">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="controls:DualClockControl">
+                    <Border CornerRadius="{DynamicResource Tg.Radius.Control}"
+                            BorderBrush="{DynamicResource Tg.Stroke.Strong}" BorderThickness="1">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Background="{DynamicResource Tg.Bg.Panel}" Padding="9,5">
+                                <StackPanel>
+                                    <TextBlock Text="{TemplateBinding Zone1Label}" Style="{StaticResource Tg.MicroLabel}"
+                                               FontSize="8"/>
+                                    <TextBlock Text="{TemplateBinding Zone1Time}" Style="{StaticResource Tg.NumText}"
+                                               FontSize="15" FontWeight="Bold"
+                                               Foreground="{DynamicResource Tg.Ink.Primary}"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="1" Background="{DynamicResource Tg.Bg.Panel}" Padding="9,5"
+                                    BorderBrush="{DynamicResource Tg.Stroke.Strong}" BorderThickness="1,0,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="{TemplateBinding Zone2Label}" Style="{StaticResource Tg.MicroLabel}"
+                                               FontSize="8"
+                                               Foreground="{DynamicResource Tg.State.Info}"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{TemplateBinding Zone2Time}" Style="{StaticResource Tg.NumText}"
+                                                   FontSize="15" FontWeight="Bold"
+                                                   Foreground="{DynamicResource Tg.State.Info}"/>
+                                        <!-- S2 闪烁光标 6×11（1.1s Discrete；激增 0.45s） -->
+                                        <Rectangle Width="6" Height="11" Margin="4,1,0,0"
+                                                   VerticalAlignment="Bottom"
+                                                   Fill="{DynamicResource Tg.State.Info}"
+                                                   Visibility="{Binding IsTerminalSkin, Source={x:Static infra:SkinFlags.Instance}, Converter={StaticResource BoolVis}}">
+                                            <Rectangle.Triggers>
+                                                <EventTrigger RoutedEvent="Rectangle.Loaded">
+                                                    <BeginStoryboard x:Name="blinkSlow" HandoffBehavior="SnapshotAndReplace">
+                                                        <Storyboard RepeatBehavior="Forever">
+                                                            <DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="Opacity">
+                                                                <DiscreteDoubleKeyFrame KeyTime="0:0:0" Value="1"/>
+                                                                <DiscreteDoubleKeyFrame KeyTime="0:0:0.55" Value="0"/>
+                                                                <DiscreteDoubleKeyFrame KeyTime="0:0:1.1" Value="1"/>
+                                                            </DoubleAnimationUsingKeyFrames>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </EventTrigger>
+                                            </Rectangle.Triggers>
+                                        </Rectangle>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ============ 跑马灯（悬浮球展开态） ============ -->
+    <DataTemplate x:Key="Tg.MarqueeItemTemplate">
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,0" Background="Transparent">
+            <StackPanel Orientation="Horizontal" Margin="16,0">
+                <TextBlock Text="{Binding Title}" FontFamily="{DynamicResource Tg.Font.Num}"
+                           FontSize="11.5" FontWeight="Bold"
+                           Foreground="{DynamicResource Tg.State.Info}" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding Value}" Margin="7,0,0,0" FontFamily="{DynamicResource Tg.Font.Num}"
+                           Typography.NumeralAlignment="Tabular"
+                           FontSize="11.5" Foreground="{DynamicResource Tg.Ink.Primary}" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding Delta}" Margin="7,0,0,0" FontFamily="{DynamicResource Tg.Font.Num}"
+                           FontSize="10" Foreground="{DynamicResource Tg.State.Ok}" VerticalAlignment="Center"/>
+                <TextBlock Text="│" Margin="16,0,0,0" FontSize="11"
+                           Foreground="{DynamicResource Tg.Stroke.Hair}" VerticalAlignment="Center"/>
+            </StackPanel>
+        </StackPanel>
+    </DataTemplate>
+    <Style TargetType="controls:MarqueeStrip">
+        <Setter Property="ItemTemplate" Value="{StaticResource Tg.MarqueeItemTemplate}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="controls:MarqueeStrip">
+                    <Border ClipToBounds="True">
+                        <Border.OpacityMask>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                <GradientStop Color="#00FFFFFF" Offset="0"/>
+                                <GradientStop Color="#FFFFFFFF" Offset="0.05"/>
+                                <GradientStop Color="#FFFFFFFF" Offset="0.95"/>
+                                <GradientStop Color="#00FFFFFF" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Border.OpacityMask>
+                        <StackPanel x:Name="PART_Rail" Orientation="Horizontal">
+                            <ItemsControl ItemsSource="{TemplateBinding ItemsSource}" ItemTemplate="{TemplateBinding ItemTemplate}"><ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel></ItemsControl>
+                            <ItemsControl ItemsSource="{TemplateBinding ItemsSource}" ItemTemplate="{TemplateBinding ItemTemplate}"><ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel></ItemsControl>
+                        </StackPanel>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ============ S2 状态条闪烁光标（Loaded blink 在实例处；激增 0.45s 由样式触发） ============ -->
+    <Style x:Key="Tg.StatusCursor" TargetType="Rectangle">
+        <Setter Property="Width" Value="6"/>
+        <Setter Property="Height" Value="11"/>
+        <Setter Property="Fill" Value="{DynamicResource Tg.Accent.Brand}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Visibility" Value="{Binding IsTerminalSkin, Source={x:Static infra:SkinFlags.Instance}, Converter={StaticResource BoolVis}}"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding SurgeBlink, Source={x:Static infra:SkinFlags.Instance}}" Value="True">
+                <DataTrigger.EnterActions>
+                    <BeginStoryboard HandoffBehavior="SnapshotAndReplace">
+                        <Storyboard RepeatBehavior="Forever">
+                            <DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="Opacity">
+                                <DiscreteDoubleKeyFrame KeyTime="0:0:0" Value="1"/>
+                                <DiscreteDoubleKeyFrame KeyTime="0:0:0.225" Value="0"/>
+                                <DiscreteDoubleKeyFrame KeyTime="0:0:0.45" Value="1"/>
+                            </DoubleAnimationUsingKeyFrames>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.EnterActions>
+                <DataTrigger.ExitActions>
+                    <BeginStoryboard HandoffBehavior="SnapshotAndReplace">
+                        <Storyboard RepeatBehavior="Forever">
+                            <DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="Opacity">
+                                <DiscreteDoubleKeyFrame KeyTime="0:0:0" Value="1"/>
+                                <DiscreteDoubleKeyFrame KeyTime="0:0:0.55" Value="0"/>
+                                <DiscreteDoubleKeyFrame KeyTime="0:0:1.1" Value="1"/>
+                            </DoubleAnimationUsingKeyFrames>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.ExitActions>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- 卡片实际/倍率分段按钮 -->
+    <Style x:Key="Tg.SegButton" TargetType="RadioButton">
+        <Setter Property="FontFamily" Value="{DynamicResource Tg.Font.Num}"/>
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="Foreground" Value="{DynamicResource Tg.Ink.Faint}"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Padding" Value="9,3"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Border x:Name="bd" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}"
+                            CornerRadius="{DynamicResource Tg.Radius.Control}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{DynamicResource Tg.Accent.Brand}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource Tg.OnAccent}"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Foreground" Value="{DynamicResource Tg.Ink.Primary}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ============ C-03 ModelCard ============ -->
+    <Style TargetType="controls:ModelCard">
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="controls:ModelCard">
+                    <Grid>
+                        <!-- S3 巨型序号水印（常驻低对比，选中染 Accent.Soft） -->
+                        <TextBlock Text="{TemplateBinding SerialText}" FontSize="52" FontWeight="ExtraBold"
+                                   HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,6,-8"
+                                   FontFamily="{DynamicResource Tg.Font.Display}"
+                                   Visibility="{Binding SerialWatermark, Source={x:Static infra:SkinFlags.Instance}, Converter={StaticResource BoolVis}}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource Tg.Ink.Primary}"/>
+                                    <Setter Property="Opacity" Value="0.05"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource TemplatedParent}}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource Tg.Accent.Soft}"/>
+                                            <Setter Property="Opacity" Value="0.9"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+
+                        <Border x:Name="PART_Root" CornerRadius="{DynamicResource Tg.Radius.Card}"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{DynamicResource Tg.Stroke.Hair}"
+                                BorderThickness="{DynamicResource Tg.Card.BorderThickness}"
+                                Padding="11,9,12,9" Margin="0">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- Header：Provider / 模型名 / 漏N -->
+                                <Grid Grid.Row="0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Style="{StaticResource Tg.ProviderBadge}" Padding="6,1">
+                                            <TextBlock Text="{TemplateBinding ProviderText}"
+                                                       Style="{StaticResource Tg.ProviderBadgeText}"/>
+                                        </Border>
+                                        <TextBlock Text="{TemplateBinding ModelName}" Margin="7,0,0,0"
+                                                   FontFamily="{DynamicResource Tg.Font.Display}"
+                                                   FontSize="13" FontWeight="Bold"
+                                                   Foreground="{DynamicResource Tg.Ink.Primary}"
+                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
+                                            <!-- 模型名右键菜单（§1.5 第二层）：刷新数据 + 数据范围 -->
+                                            <TextBlock.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="刷新数据" Style="{StaticResource Tg.MenuItem}" InputGestureText="F5"
+                                                              Command="{Binding RefreshCommand}"/>
+                                                    <Separator Style="{StaticResource Tg.MenuSeparator}"/>
+                                                    <MenuItem Header="数据范围" Style="{StaticResource Tg.MenuItem}">
+                                                        <MenuItem Header="本日" Style="{StaticResource Tg.MenuItem}" IsCheckable="True"
+                                                                  IsChecked="{Binding Range, Converter={StaticResource EnumEquals}, ConverterParameter=Today}"
+                                                                  Command="{Binding SelectRangeCommand}" CommandParameter="Today"/>
+                                                        <MenuItem Header="本周" Style="{StaticResource Tg.MenuItem}" IsCheckable="True"
+                                                                  IsChecked="{Binding Range, Converter={StaticResource EnumEquals}, ConverterParameter=Week}"
+                                                                  Command="{Binding SelectRangeCommand}" CommandParameter="Week"/>
+                                                        <MenuItem Header="近 7 日" Style="{StaticResource Tg.MenuItem}" IsCheckable="True"
+                                                                  IsChecked="{Binding Range, Converter={StaticResource EnumEquals}, ConverterParameter=Days7}"
+                                                                  Command="{Binding SelectRangeCommand}" CommandParameter="Days7"/>
+                                                        <MenuItem Header="本月" Style="{StaticResource Tg.MenuItem}" IsCheckable="True"
+                                                                  IsChecked="{Binding Range, Converter={StaticResource EnumEquals}, ConverterParameter=Month}"
+                                                                  Command="{Binding SelectRangeCommand}" CommandParameter="Month"/>
+                                                        <MenuItem Header="上月" Style="{StaticResource Tg.MenuItem}" IsCheckable="True"
+                                                                  IsChecked="{Binding Range, Converter={StaticResource EnumEquals}, ConverterParameter=LastMonth}"
+                                                                  Command="{Binding SelectRangeCommand}" CommandParameter="LastMonth"/>
+                                                        <MenuItem Header="本季度" Style="{StaticResource Tg.MenuItem}" IsCheckable="True"
+                                                                  IsChecked="{Binding Range, Converter={StaticResource EnumEquals}, ConverterParameter=Quarter}"
+                                                                  Command="{Binding SelectRangeCommand}" CommandParameter="Quarter"/>
+                                                        <MenuItem Header="本年" Style="{StaticResource Tg.MenuItem}" IsCheckable="True"
+                                                                  IsChecked="{Binding Range, Converter={StaticResource EnumEquals}, ConverterParameter=Year}"
+                                                                  Command="{Binding SelectRangeCommand}" CommandParameter="Year"/>
+                                                        <MenuItem Header="自定义日期…" Style="{StaticResource Tg.MenuItem}"
+                                                                  Command="{Binding SelectRangeCommand}" CommandParameter="Custom"/>
+                                                    </MenuItem>
+                                                </ContextMenu>
+                                            </TextBlock.ContextMenu>
+                                        </TextBlock>
+                                    </StackPanel>
+                                    <Border Style="{StaticResource Tg.Badge}" HorizontalAlignment="Right"
+                                            BorderThickness="1" BorderBrush="{DynamicResource Tg.State.Danger}"
+                                            Background="{DynamicResource Tg.Accent.Soft}"
+                                            Visibility="{Binding MissCount, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource PosVis}}">
+                                        <TextBlock FontSize="10" FontWeight="Bold"
+                                                   FontFamily="{DynamicResource Tg.Font.Num}"
+                                                   Foreground="{DynamicResource Tg.State.Danger}">
+                                            <Run Text="漏"/><Run Text="{Binding MissCount, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}}"/>
+                                        </TextBlock>
+                                    </Border>
+                                </Grid>
+
+                                <!-- Row1：请求数 | 增量 -->
+                                <Grid Grid.Row="1" Margin="0,7,0,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{TemplateBinding RequestCountText}"
+                                                   Style="{StaticResource Tg.NumText}" FontSize="13" FontWeight="Bold"
+                                                   Foreground="{DynamicResource Tg.Ink.Primary}"/>
+                                        <TextBlock Text=" 请求" Style="{StaticResource Tg.MicroLabel}"
+                                                   FontFamily="{DynamicResource Tg.Font.Body}"/>
+                                    </StackPanel>
+                                    <TextBlock Text="{TemplateBinding DeltaText}" HorizontalAlignment="Right"
+                                               Style="{StaticResource Tg.NumText}" FontSize="12" FontWeight="Bold"
+                                               Foreground="{DynamicResource Tg.State.Ok}"
+                                               Visibility="{Binding DeltaText, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource NullVis}}"/>
+                                </Grid>
+
+                                <!-- Total 大数字 -->
+                                <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,3,0,0">
+                                    <TextBlock Text="{TemplateBinding TotalText}"
+                                               FontFamily="{DynamicResource Tg.Font.Num}"
+                                               Typography.NumeralAlignment="Tabular"
+                                               FontSize="{StaticResource Tg.Fs.Display}" FontWeight="Bold"
+                                               Foreground="{DynamicResource Tg.Ink.Primary}"
+                                               VerticalAlignment="Bottom"/>
+                                    <TextBlock Text="{TemplateBinding TotalUnitText}"
+                                               FontFamily="{DynamicResource Tg.Font.Num}" FontSize="9"
+                                               Foreground="{DynamicResource Tg.Ink.Faint}"
+                                               VerticalAlignment="Bottom" Margin="6,0,0,3"/>
+                                </StackPanel>
+
+                                <!-- ×N 倍率徽章（绝对定位右上） -->
+                                <Grid Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                        Margin="0,20,0,0"
+                                        Visibility="{Binding IsMultiplier, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BoolVis}}">
+                                    <Rectangle RadiusX="9" RadiusY="9"
+                                               Stroke="{DynamicResource Tg.MulChip.Border}" Fill="{DynamicResource Tg.MulChip.Bg}"
+                                               StrokeDashArray="{DynamicResource Tg.MulChip.Dash}"/>
+                                    <TextBlock Text="{TemplateBinding MulBadgeText}" FontSize="9.5" Margin="6,1"
+                                               FontFamily="{DynamicResource Tg.Font.Num}"
+                                               Foreground="{DynamicResource Tg.MulChip.Ink}"/>
+                                </Grid>
+
+                                <!-- 三比例条 -->
+                                <StackPanel Grid.Row="3" Margin="0,7,0,0" VerticalAlignment="Top">
+                                    <controls:RatioBar Label="H 命中" Kind="Hit" Margin="0,0,0,5"
+                                                       Ratio="{TemplateBinding RatioH}"
+                                                       ValueText="{TemplateBinding RatioHText}"/>
+                                    <controls:RatioBar Label="M 未中" Kind="Miss" Margin="0,0,0,5"
+                                                       Ratio="{TemplateBinding RatioM}"
+                                                       ValueText="{TemplateBinding RatioMText}"/>
+                                    <controls:RatioBar Label="O 输出" Kind="Output"
+                                                       Ratio="{TemplateBinding RatioO}"
+                                                       ValueText="{TemplateBinding RatioOText}"/>
+                                </StackPanel>
+
+                                <!-- Footer：实际/倍率分段 + 口径点 -->
+                                <Grid Grid.Row="4" Margin="0,8,0,0">
+                                    <Border HorizontalAlignment="Left"
+                                            CornerRadius="{DynamicResource Tg.Radius.Control}"
+                                            BorderBrush="{DynamicResource Tg.Stroke.Strong}"
+                                            BorderThickness="1" Background="{DynamicResource Tg.Bg.Inset}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <RadioButton GroupName="{Binding ModelName, RelativeSource={RelativeSource TemplatedParent}}"
+                                                         Command="{Binding SetActualViewCommand, RelativeSource={RelativeSource TemplatedParent}}"
+                                                         IsChecked="{Binding IsMultiplier, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay, Converter={StaticResource BoolVisInv}}"
+                                                         Style="{DynamicResource Tg.SegButton}" Content="实际"/>
+                                            <RadioButton GroupName="{Binding ModelName, RelativeSource={RelativeSource TemplatedParent}}"
+                                                         Command="{Binding SetMulViewCommand, RelativeSource={RelativeSource TemplatedParent}}"
+                                                         IsChecked="{TemplateBinding IsMultiplier}"
+                                                         Style="{DynamicResource Tg.SegButton}" Content="倍率"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <!-- 口径点：显示目标口径（随样例交互）；UTC 卡描边琥珀 -->
+                                    <Button HorizontalAlignment="Right"
+                                            Command="{Binding ToggleCaliberCommand, RelativeSource={RelativeSource TemplatedParent}}"
+                                            Style="{StaticResource Tg.Btn}" Padding="6,1" FontSize="9.5"
+                                            Content="{TemplateBinding CaliberDotText}"/>
+                                </Grid>
+                            </Grid>
+                        </Border>
+
+                        <!-- 选中态：S2/S4 四角记号 -->
+                        <Border x:Name="selTL" Visibility="Collapsed" Width="10" Height="10" BorderThickness="1.5,1.5,0,0"
+                                BorderBrush="{DynamicResource Tg.Accent.Brand}"
+                                CornerRadius="8,0,0,0" IsHitTestVisible="False" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+                        <Border x:Name="selBR" Visibility="Collapsed" Width="10" Height="10" BorderThickness="0,0,1.5,1.5"
+                                BorderBrush="{DynamicResource Tg.Accent.Brand}"
+                                CornerRadius="0,0,8,0" IsHitTestVisible="False" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+                        <Border x:Name="selTR" Visibility="Collapsed" Width="11" Height="11" BorderThickness="1.5,1.5,0,0"
+                                BorderBrush="{DynamicResource Tg.Accent.Brand}"
+                                CornerRadius="0,8,0,0" IsHitTestVisible="False" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                RenderTransformOrigin="1,0">
+                            <Border.RenderTransform><ScaleTransform ScaleX="-1" ScaleY="1"/></Border.RenderTransform>
+                        </Border>
+                        <Border x:Name="selBL" Visibility="Collapsed" Width="11" Height="11" BorderThickness="1.5,1.5,0,0"
+                                BorderBrush="{DynamicResource Tg.Accent.Brand}"
+                                CornerRadius="0,0,0,8" IsHitTestVisible="False" HorizontalAlignment="Left" VerticalAlignment="Bottom">
+                            <Border.RenderTransform><ScaleTransform ScaleX="1" ScaleY="-1"/></Border.RenderTransform>
+                        </Border>
+                        <!-- 选中态：S3 顶缘 3px 红条 -->
+                        <Border x:Name="selTopBar" Visibility="Collapsed" Height="3" VerticalAlignment="Top" Margin="1"
+                                Background="{DynamicResource Tg.State.Danger}"
+                                CornerRadius="{DynamicResource Tg.Radius.Card}" IsHitTestVisible="False"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <!-- 悬停描边 -->
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                                <Condition Property="IsSelected" Value="False"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="PART_Root" Property="BorderBrush" Value="{DynamicResource Tg.Stroke.Hover}"/>
+                        </MultiTrigger>
+                        <!-- 选中：S1 墨描边 + 偏移硬影 / S2 磷绿描边 / S3 墨描边 / S4 尾焰描边 -->
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="PART_Root" Property="Background" Value="{DynamicResource Tg.Bg.CardSel}"/>
+                        </Trigger>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource TemplatedParent}}" Value="True"/>
+                                <Condition Binding="{Binding IsSkyHud, Source={x:Static infra:SkinFlags.Instance}}" Value="True"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="PART_Root" Property="BorderBrush" Value="{DynamicResource Tg.Accent.Brand}"/>
+                        </MultiDataTrigger>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource TemplatedParent}}" Value="True"/>
+                                <Condition Binding="{Binding IsSkyHud, Source={x:Static infra:SkinFlags.Instance}}" Value="False"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="PART_Root" Property="BorderBrush" Value="{DynamicResource Tg.Stroke.Strong}"/>
+                        </MultiDataTrigger>
+                        <!-- S2 磷绿描边（深色肤选中） -->
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource TemplatedParent}}" Value="True"/>
+                                <Condition Binding="{Binding IsGraphiteTerminal, Source={x:Static infra:SkinFlags.Instance}}" Value="True"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="PART_Root" Property="BorderBrush" Value="{DynamicResource Tg.Accent.Brand}"/>
+                        </MultiDataTrigger>
+                        <!-- 口径 UTC：描边琥珀 -->
+                        <DataTrigger Binding="{Binding IsUtc, RelativeSource={RelativeSource TemplatedParent}}" Value="True">
+                            <Setter TargetName="PART_Root" Property="BorderBrush" Value="{DynamicResource Tg.State.Warn}"/>
+                        </DataTrigger>
+                        <!-- 选中角标显隐 -->
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource TemplatedParent}}" Value="True"/>
+                                <Condition Binding="{Binding CornerMarks, Source={x:Static infra:SkinFlags.Instance}}" Value="True"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="selTL" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="selBR" Property="Visibility" Value="Visible"/>
+                        </MultiDataTrigger>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource TemplatedParent}}" Value="True"/>
+                                <Condition Binding="{Binding IsSkyHud, Source={x:Static infra:SkinFlags.Instance}}" Value="True"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="selTR" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="selBL" Property="Visibility" Value="Visible"/>
+                        </MultiDataTrigger>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource TemplatedParent}}" Value="True"/>
+                                <Condition Binding="{Binding TopBarSelection, Source={x:Static infra:SkinFlags.Instance}}" Value="True"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="selTopBar" Property="Visibility" Value="Visible"/>
+                        </MultiDataTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <!-- S1 选中偏移硬影 -->
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource Self}}" Value="True"/>
+                    <Condition Binding="{Binding HardShadowSelection, Source={x:Static infra:SkinFlags.Instance}}" Value="True"/>
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Effect" Value="{DynamicResource Tg.Shadow.Float}"/>
+            </MultiDataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- ============ C-13 DialogShell（对话框统一壳） ============ -->
+    <Style x:Key="Tg.DialogShell" TargetType="dialogs:DialogShell">
+        <Setter Property="FontFamily" Value="{DynamicResource Tg.Font.Body}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="dialogs:DialogShell">
+                    <Grid>
+                        <Border CornerRadius="{DynamicResource Tg.Radius.Dialog}"
+                                Background="{DynamicResource Tg.Bg.Panel}"
+                                BorderBrush="{DynamicResource Tg.Stroke.Strong}" BorderThickness="1"
+                                Effect="{DynamicResource Tg.Shadow.Float}" Margin="24">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <!-- Header -->
+                                <Border Grid.Row="0" Background="{DynamicResource Tg.Bg.Card}"
+                                        BorderBrush="{DynamicResource Tg.Stroke.Hair}" BorderThickness="0,0,0,1"
+                                        Padding="14,10" CornerRadius="16,16,0,0">
+                                    <Grid>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Border Background="{DynamicResource Tg.Accent.Brand}"
+                                                    CornerRadius="{DynamicResource Tg.Radius.Badge}" Padding="8,2"
+                                                    VerticalAlignment="Center">
+                                                <TextBlock Text="{TemplateBinding HeaderTag}" FontSize="10.5" FontWeight="Bold"
+                                                           FontFamily="{DynamicResource Tg.Font.Num}"
+                                                           Foreground="{DynamicResource Tg.OnAccent}"/>
+                                            </Border>
+                                            <TextBlock Text="{TemplateBinding HeaderTitle}" Margin="10,0,0,0" FontSize="14"
+                                                       FontWeight="Bold" FontFamily="{DynamicResource Tg.Font.Display}"
+                                                       Foreground="{DynamicResource Tg.Ink.Primary}" VerticalAlignment="Center"/>
+                                            <Border Margin="9,0,0,0" Padding="7,1" CornerRadius="{DynamicResource Tg.Radius.Badge}"
+                                                    BorderBrush="{DynamicResource Tg.Accent.Brand}" BorderThickness="1"
+                                                    VerticalAlignment="Center"
+                                                    Visibility="{TemplateBinding ModelTag, Converter={StaticResource NullVis}}">
+                                                <TextBlock Text="{TemplateBinding ModelTag}" FontSize="10.5" FontFamily="{DynamicResource Tg.Font.Num}"
+                                                           Foreground="{DynamicResource Tg.Accent.Brand}"/>
+                                            </Border>
+                                        </StackPanel>
+                                        <Button Width="26" Height="26" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                Style="{StaticResource Tg.Btn}" Padding="0"
+                                                Command="{x:Static dialogs:DialogShell.ShellCloseCommand}">
+                                            <TextBlock Text="✕" TextAlignment="Center" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                       FontSize="11" Foreground="{DynamicResource Tg.Ink.Second}"/>
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                                <!-- 版本/提示条 -->
+                                <Border Grid.Row="1" Background="{DynamicResource Tg.Accent.Soft}" Padding="14,6"
+                                        Visibility="{TemplateBinding VersionText, Converter={StaticResource NullVis}}">
+                                    <TextBlock Text="{TemplateBinding VersionText}" FontSize="10.5" FontFamily="{DynamicResource Tg.Font.Num}"
+                                               Foreground="{DynamicResource Tg.Ink.Second}"/>
+                                </Border>
+                                <!-- Body -->
+                                <ContentPresenter Grid.Row="2" Margin="14,12"/>
+                                <!-- Footer -->
+                                <Border Grid.Row="3" Background="{DynamicResource Tg.Bg.Card}"
+                                        BorderBrush="{DynamicResource Tg.Stroke.Hair}" BorderThickness="0,1,0,0"
+                                        Padding="14,10" CornerRadius="0,0,16,16">
+                                    <Grid>
+                                        <TextBlock Text="{TemplateBinding FooterHint}" FontSize="9.5" MaxWidth="330"
+                                                   HorizontalAlignment="Left" VerticalAlignment="Center" TextWrapping="Wrap"
+                                                   Foreground="{DynamicResource Tg.Ink.Faint}"/>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                            <Button Content="{TemplateBinding CancelText}" Style="{StaticResource Tg.Btn}"
+                                                    Command="{x:Static dialogs:DialogShell.ShellCancelCommand}"
+                                                    Visibility="{TemplateBinding ShowCancel, Converter={StaticResource BoolVis}}"/>
+                                            <Button Content="{TemplateBinding ConfirmText}" Style="{StaticResource Tg.PrimaryButton}"
+                                                    Margin="10,0,0,0" Command="{x:Static dialogs:DialogShell.ShellConfirmCommand}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>

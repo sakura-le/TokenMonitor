@@ -1,0 +1,142 @@
+<dialogs:ShellDialog
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:dialogs="clr-namespace:TokenMonitor.App.Dialogs"
+        x:Class="TokenMonitor.App.Dialogs.PricingConfigDialog"
+        HeaderTag="PRICE" HeaderTitle="计价配置" ModelTag="{Binding ChosenModel}"
+        VersionText="{Binding VersionBar}"
+        FooterHint="跨午夜时段按 LOCAL 平移 · 保存前自动备份 pricing.json"
+        ConfirmText="保存并生效" Width="600"
+        ScrollViewer.VerticalScrollBarVisibility="Auto">
+    <dialogs:ShellDialog.Content>
+        <ScrollViewer MaxHeight="420" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <Grid Margin="0,0,0,11">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="190"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="120"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="模型 MODEL" Style="{StaticResource Tg.MicroLabel}" Margin="0,0,0,5"/>
+                        <ComboBox Style="{StaticResource Tg.Combo}" ItemsSource="{Binding Models}"
+                                  SelectedItem="{Binding ChosenModel}"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="货币 CURRENCY" Style="{StaticResource Tg.MicroLabel}" Margin="0,0,0,5"/>
+                        <ComboBox Style="{StaticResource Tg.Combo}" x:Name="CurrencyBox" SelectionChanged="Currency_Changed"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="4">
+                        <TextBlock Text="生效日期 EFFECTIVE" Style="{StaticResource Tg.MicroLabel}" Margin="0,0,0,5"/>
+                        <TextBox Style="{StaticResource Tg.Input}" Text="{Binding EffectiveFrom, UpdateSourceTrigger=PropertyChanged}"/>
+                    </StackPanel>
+                </Grid>
+
+                <ItemsControl ItemsSource="{Binding Rules}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border BorderBrush="{DynamicResource Tg.Stroke.Strong}" BorderThickness="1"
+                                    CornerRadius="{DynamicResource Tg.Radius.Control}" Padding="12,10"
+                                    Background="{DynamicResource Tg.Bg.Card}" Margin="0,0,0,10">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,7">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="▸ " Foreground="{DynamicResource Tg.Accent.Brand}"/>
+                                            <TextBlock Text="{Binding Title}" FontWeight="Bold" FontSize="12"
+                                                       Foreground="{DynamicResource Tg.Ink.Primary}" VerticalAlignment="Center"/>
+                                            <Border Margin="8,0,0,0" Padding="5,1" CornerRadius="{DynamicResource Tg.Radius.Badge}"
+                                                    BorderBrush="{DynamicResource Tg.Stroke.Strong}" BorderThickness="1">
+                                                <TextBlock Text="0.5h 粒度" FontSize="9" Foreground="{DynamicResource Tg.Ink.Faint}"/>
+                                            </Border>
+                                        </StackPanel>
+                                        <Button Content="删除" Style="{StaticResource Tg.DangerButton}" Padding="8,2"
+                                                HorizontalAlignment="Right"
+                                                Command="{Binding DataContext.RemoveRuleCommand, RelativeSource={RelativeSource AncestorType=dialogs:PricingConfigDialog}}"
+                                                CommandParameter="{Binding}"/>
+                                    </Grid>
+
+                                    <!-- 时段行 -->
+                                    <ItemsControl ItemsSource="{Binding Periods}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,3">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="26"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="30"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBox Style="{StaticResource Tg.Input}" Text="{Binding Start, UpdateSourceTrigger=PropertyChanged}"/>
+                                                    <TextBlock Grid.Column="1" Text="→" TextAlignment="Center" VerticalAlignment="Center"
+                                                               Foreground="{DynamicResource Tg.Ink.Faint}"/>
+                                                    <TextBox Grid.Column="2" Style="{StaticResource Tg.Input}" Text="{Binding End, UpdateSourceTrigger=PropertyChanged}"/>
+                                                    <Button Grid.Column="3" Content="✕" Style="{StaticResource Tg.Btn}" Padding="0" Width="24"
+                                                            Command="{Binding DataContext.RemovePeriodCommand, RelativeSource={RelativeSource AncestorType=dialogs:PricingConfigDialog}}"
+                                                            CommandParameter="{Binding}"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <Button Content="+ 添加时段行" Style="{StaticResource Tg.Btn}" Padding="12,4"
+                                            HorizontalAlignment="Left" Margin="0,6,0,0" Command="{Binding AddPeriodCommand}"/>
+
+                                    <!-- 星期 chips（1=周一…7=周日；周末红字） -->
+                                    <TextBlock Text="星期 DAYS" Style="{StaticResource Tg.MicroLabel}" Margin="0,9,0,5"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <StackPanel.Resources>
+                                            <Style TargetType="ToggleButton" BasedOn="{StaticResource Tg.ChromeToggle}">
+                                                <Setter Property="Padding" Value="0"/>
+                                                <Setter Property="Width" Value="34"/>
+                                                <Setter Property="Height" Value="27"/>
+                                                <Setter Property="Margin" Value="0,0,6,0"/>
+                                                <Setter Property="FontSize" Value="11.5"/>
+                                            </Style>
+                                        </StackPanel.Resources>
+                                        <ToggleButton Content="一" IsChecked="{Binding D1}"/>
+                                        <ToggleButton Content="二" IsChecked="{Binding D2}"/>
+                                        <ToggleButton Content="三" IsChecked="{Binding D3}"/>
+                                        <ToggleButton Content="四" IsChecked="{Binding D4}"/>
+                                        <ToggleButton Content="五" IsChecked="{Binding D5}"/>
+                                        <ToggleButton Content="六" IsChecked="{Binding D6}" Foreground="{DynamicResource Tg.State.Danger}"/>
+                                        <ToggleButton Content="日" IsChecked="{Binding D7}" Foreground="{DynamicResource Tg.State.Danger}"/>
+                                    </StackPanel>
+
+                                    <!-- 三单价 -->
+                                    <Grid Margin="0,10,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition/><ColumnDefinition Width="10"/><ColumnDefinition/>
+                                            <ColumnDefinition Width="10"/><ColumnDefinition/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="未命中 /1M" Style="{StaticResource Tg.MicroLabel}" Margin="0,0,0,5"/>
+                                            <TextBox Style="{StaticResource Tg.Input}" Text="{Binding InputPer1M, UpdateSourceTrigger=PropertyChanged}"/>
+                                            <TextBlock Text="input_per_1m" FontSize="8.5" Margin="0,3,0,0"
+                                                       Foreground="{DynamicResource Tg.Ink.Faint}"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="缓存命中 /1M" Style="{StaticResource Tg.MicroLabel}" Margin="0,0,0,5"/>
+                                            <TextBox Style="{StaticResource Tg.Input}" Text="{Binding CachePer1M, UpdateSourceTrigger=PropertyChanged}"/>
+                                            <TextBlock Text="cache_per_1m" FontSize="8.5" Margin="0,3,0,0"
+                                                       Foreground="{DynamicResource Tg.Ink.Faint}"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="4">
+                                            <TextBlock Text="输出 /1M" Style="{StaticResource Tg.MicroLabel}" Margin="0,0,0,5"/>
+                                            <TextBox Style="{StaticResource Tg.Input}" Text="{Binding OutputPer1M, UpdateSourceTrigger=PropertyChanged}"/>
+                                            <TextBlock Text="output_per_1m" FontSize="8.5" Margin="0,3,0,0"
+                                                       Foreground="{DynamicResource Tg.Ink.Faint}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Button Content="+ 添加规则卡" Style="{StaticResource Tg.Btn}" Padding="12,5"
+                        HorizontalAlignment="Left" Command="{Binding AddRuleCommand}"/>
+            </StackPanel>
+        </ScrollViewer>
+    </dialogs:ShellDialog.Content>
+</dialogs:ShellDialog>

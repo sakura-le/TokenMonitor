@@ -1,0 +1,82 @@
+<Window x:Class="TokenMonitor.App.FloatingBall"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:TokenMonitor.App.Controls"
+        xmlns:infra="clr-namespace:TokenMonitor.App.Infrastructure"
+        Title="TokenMonitor Ball" Width="68" Height="68"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        ShowInTaskbar="False" ShowActivated="False" ResizeMode="NoResize"
+        TextOptions.TextFormattingMode="Display" UseLayoutRounding="True">
+
+    <Grid x:Name="Root">
+        <!-- ============ 收起态 Ø68 ============ -->
+        <Grid x:Name="BallFace" Width="68" Height="68" Visibility="Visible"
+              Effect="{DynamicResource Tg.Shadow.Float}">
+            <Ellipse Fill="{DynamicResource Tg.Bg.Card}"
+                     Stroke="{DynamicResource Tg.Stroke.Strong}" StrokeThickness="1"/>
+            <!-- S4 云白渐变底盘（IsSkySkin 时叠加） -->
+            <Ellipse Visibility="{Binding IsSkySkin, Source={x:Static infra:SkinFlags.Instance}, Converter={StaticResource BoolVis}}">
+                <Ellipse.Fill>
+                    <RadialGradientBrush GradientOrigin="0.5,0.2" Center="0.5,0.4">
+                        <GradientStop Color="#FFFFFFFF" Offset="0"/>
+                        <GradientStop Color="#00FFFFFF" Offset="1"/>
+                    </RadialGradientBrush>
+                </Ellipse.Fill>
+            </Ellipse>
+            <!-- S4 雷达扫描扇 -->
+            <Grid Visibility="{Binding IsRadarSkin, Source={x:Static infra:SkinFlags.Instance}, Converter={StaticResource BoolVis}}">
+                <Ellipse Width="54" Height="54" Stroke="#1E10304F" StrokeThickness="1"/>
+                <Path Fill="{DynamicResource Tg.Ring.Stroke}" Opacity="0.22"
+                      Data="M 34 34 L 34 7 A 27 27 0 0 1 53.09 14.91 Z">
+                    <Path.RenderTransform>
+                        <RotateTransform x:Name="ballRadar" CenterX="34" CenterY="34" Angle="0"/>
+                    </Path.RenderTransform>
+                </Path>
+            </Grid>
+            <!-- 命中弧（起点朝上） -->
+            <Path x:Name="HitArc" Stroke="{DynamicResource Tg.Ring.Stroke}" StrokeThickness="4"
+                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                <TextBlock Text="{Binding BallTotal}" FontFamily="{DynamicResource Tg.Font.Num}"
+                           Typography.NumeralAlignment="Tabular" FontSize="13.5" FontWeight="Bold"
+                           Foreground="{DynamicResource Tg.Ink.Primary}" TextAlignment="Center"/>
+                <TextBlock Text="{Binding BallDelta}" FontFamily="{DynamicResource Tg.Font.Num}"
+                           FontSize="8.5" Foreground="{DynamicResource Tg.State.Ok}" TextAlignment="Center"
+                           Margin="0,2,0,0"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- ============ 展开态 470×56 胶囊 ============ -->
+        <Border x:Name="Pill" Width="470" Height="56" CornerRadius="16" Visibility="Collapsed"
+                Background="{DynamicResource Tg.Bg.Panel}"
+                BorderBrush="{DynamicResource Tg.Stroke.Strong}" BorderThickness="1"
+                Effect="{DynamicResource Tg.Shadow.Float}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" Margin="14,0,6,0" VerticalAlignment="Center">
+                    <Ellipse Width="8" Height="8" Fill="{DynamicResource Tg.State.Ok}"/>
+                    <Border Margin="7,0,0,0" Background="{DynamicResource Tg.Accent.Brand}"
+                            CornerRadius="{DynamicResource Tg.Radius.Badge}" Padding="7,2">
+                        <TextBlock Text="LIVE" FontSize="9" FontWeight="Bold" FontFamily="{DynamicResource Tg.Font.Num}"
+                                   Foreground="{DynamicResource Tg.OnAccent}"/>
+                    </Border>
+                </StackPanel>
+                <controls:MarqueeStrip x:Name="Strip" Grid.Column="1" Margin="4,0"/>
+                <Border Grid.Column="2" Margin="6,0,12,0" BorderBrush="{DynamicResource Tg.Stroke.Hair}"
+                        BorderThickness="1,0,0,0" Padding="10,0,0,0" VerticalAlignment="Center">
+                    <StackPanel>
+                        <TextBlock Text="{Binding LocalBig}" FontFamily="{DynamicResource Tg.Font.Num}"
+                                   Typography.NumeralAlignment="Tabular" FontSize="12" FontWeight="Bold"
+                                   Foreground="{DynamicResource Tg.Ink.Primary}" TextAlignment="Right"/>
+                        <TextBlock Text="{Binding UtcSmall, StringFormat=UTC {0}}" FontFamily="{DynamicResource Tg.Font.Num}"
+                                   FontSize="8" Foreground="{DynamicResource Tg.Ink.Faint}" TextAlignment="Right"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

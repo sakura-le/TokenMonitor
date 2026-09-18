@@ -1,0 +1,40 @@
+<dialogs:ShellDialog
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:dialogs="clr-namespace:TokenMonitor.App.Dialogs"
+        x:Class="TokenMonitor.App.Dialogs.TimeRangeDialog"
+        HeaderTag="RANGE" HeaderTitle="时间范围"
+        FooterHint="自定义起止按当前卡片口径（UTC/LOCAL）解释"
+        ConfirmText="确定" CancelText="取消" Width="480">
+    <dialogs:ShellDialog.Content>
+        <StackPanel>
+            <StackPanel x:Name="PresetHost" Margin="0,0,0,11">
+                <RadioButton Content="本日" GroupName="preset" Margin="0,3" Checked="Preset_Checked" Tag="0"/>
+                <RadioButton Content="本周" GroupName="preset" Margin="0,3" Checked="Preset_Checked" Tag="1"/>
+                <RadioButton Content="近 7 日" GroupName="preset" Margin="0,3" Checked="Preset_Checked" Tag="2" IsChecked="True"/>
+                <RadioButton Content="本月" GroupName="preset" Margin="0,3" Checked="Preset_Checked" Tag="3"/>
+                <RadioButton Content="上月" GroupName="preset" Margin="0,3" Checked="Preset_Checked" Tag="4"/>
+                <RadioButton Content="本季度" GroupName="preset" Margin="0,3" Checked="Preset_Checked" Tag="5"/>
+                <RadioButton Content="本年" GroupName="preset" Margin="0,3" Checked="Preset_Checked" Tag="6"/>
+            </StackPanel>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="自定义起 (YYYY-MM-DD)" Style="{StaticResource Tg.MicroLabel}" Margin="0,0,0,5"/>
+                    <TextBox Style="{StaticResource Tg.Input}" Text="{Binding StartText, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="自定义止" Style="{StaticResource Tg.MicroLabel}" Margin="0,0,0,5"/>
+                    <TextBox Style="{StaticResource Tg.Input}" Text="{Binding EndText, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
+            </Grid>
+            <TextBlock Text="填入起止日期后确定即按自定义范围生效；留空则使用所选预设。"
+                       Style="{StaticResource Tg.MicroLabel}" Margin="0,9,0,0" TextWrapping="Wrap"
+                       Foreground="{DynamicResource Tg.Ink.Second}"/>
+        </StackPanel>
+    </dialogs:ShellDialog.Content>
+</dialogs:ShellDialog>

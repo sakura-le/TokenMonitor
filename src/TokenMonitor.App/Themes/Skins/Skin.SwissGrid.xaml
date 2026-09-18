@@ -1,0 +1,119 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!--
+      ============================================================
+      Skin 3 · SwissGrid 瑞士网格（浅色 · 数据海报）
+      粗黑大数字 + 红蓝双色 + 柔角白卡；120ms 快切 + 错峰入场。
+      令牌唯一权威：design/03-ui-spec.md §2.2 / §3.4
+      ============================================================
+    -->
+
+    <sys:String x:Key="Tg.Skin.Name">SwissGrid</sys:String>
+
+    <!-- 背景 -->
+    <SolidColorBrush x:Key="Tg.Bg.Window" Color="#EDEDEA"/>
+    <SolidColorBrush x:Key="Tg.Bg.Panel" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="Tg.Bg.Card" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="Tg.Bg.CardSel" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="Tg.Bg.Inset" Color="#F6F6F3"/>
+    <SolidColorBrush x:Key="Tg.Bg.TitleBar" Color="#00EDEDEA"/>
+    <SolidColorBrush x:Key="Tg.Bg.Status" Color="#EDEDEA"/>
+    <SolidColorBrush x:Key="Tg.Mask" Color="#8C111111"/>
+
+    <!-- 描边 -->
+    <SolidColorBrush x:Key="Tg.Stroke.Strong" Color="#111111"/>
+    <SolidColorBrush x:Key="Tg.Stroke.Hair" Color="#D6D6D0"/>
+    <SolidColorBrush x:Key="Tg.Stroke.Hover" Color="#111111"/>
+
+    <!-- 文字 -->
+    <SolidColorBrush x:Key="Tg.Ink.Primary" Color="#111111"/>
+    <SolidColorBrush x:Key="Tg.Ink.Second" Color="#6E6E6E"/>
+    <SolidColorBrush x:Key="Tg.Ink.Faint" Color="#9C9C96"/>
+
+    <!-- 强调 -->
+    <SolidColorBrush x:Key="Tg.Accent.Brand" Color="#E2231A"/>
+    <SolidColorBrush x:Key="Tg.Accent.Soft" Color="#FBE3E1"/>
+    <SolidColorBrush x:Key="Tg.OnAccent" Color="#FFFFFF"/>
+
+    <!-- 图表 -->
+    <SolidColorBrush x:Key="Tg.Chart.H" Color="#2440C8"/>
+    <SolidColorBrush x:Key="Tg.Chart.M" Color="#E2231A"/>
+    <SolidColorBrush x:Key="Tg.Chart.O" Color="#111111"/>
+    <SolidColorBrush x:Key="Tg.Chart.Line" Color="#2440C8"/>
+    <SolidColorBrush x:Key="Tg.Chart.LineDot" Color="#E2231A"/>
+    <SolidColorBrush x:Key="Tg.Chart.Grid" Color="#E4E4E0"/>
+    <SolidColorBrush x:Key="Tg.Ring.Stroke" Color="#2440C8"/>
+    <SolidColorBrush x:Key="Tg.Ring.Track" Color="#E4E4E0"/>
+
+    <!-- 语义色 -->
+    <SolidColorBrush x:Key="Tg.State.Danger" Color="#E2231A"/>
+    <SolidColorBrush x:Key="Tg.State.Warn" Color="#C77800"/>
+    <SolidColorBrush x:Key="Tg.WarnInk" Color="#C77800"/>
+    <SolidColorBrush x:Key="Tg.State.Ok" Color="#1F7A3D"/>
+    <SolidColorBrush x:Key="Tg.State.Info" Color="#2440C8"/>
+
+    <!-- 漏抓横幅 -->
+    <SolidColorBrush x:Key="Tg.Banner.Bg" Color="#FBE3E1"/>
+    <SolidColorBrush x:Key="Tg.Banner.Stroke" Color="#E2231A"/>
+    <SolidColorBrush x:Key="Tg.Banner.Ink" Color="#8C1710"/>
+    <SolidColorBrush x:Key="Tg.Banner.TagInk" Color="#FFFFFF"/>
+
+    <!-- 提供商徽章 -->
+    <SolidColorBrush x:Key="Tg.Provider.Glm" Color="#E2231A"/>
+    <SolidColorBrush x:Key="Tg.Provider.DeepSeek" Color="#2440C8"/>
+    <SolidColorBrush x:Key="Tg.Provider.Qwen" Color="#6E6E6E"/>
+    <SolidColorBrush x:Key="Tg.Provider.Default" Color="#111111"/>
+
+    <!-- 圆角阶梯：窗体16 / 卡14 / 菜单14 / 对话框16 / 控件9 / 徽章7 / 占比条 pill -->
+    <CornerRadius x:Key="Tg.Radius.Window">16</CornerRadius>
+    <CornerRadius x:Key="Tg.Radius.Card">14</CornerRadius>
+    <CornerRadius x:Key="Tg.Radius.Menu">14</CornerRadius>
+    <CornerRadius x:Key="Tg.Radius.Dialog">16</CornerRadius>
+    <CornerRadius x:Key="Tg.Radius.Control">9</CornerRadius>
+    <CornerRadius x:Key="Tg.Radius.Badge">7</CornerRadius>
+    <CornerRadius x:Key="Tg.Radius.Bar">999</CornerRadius>
+    <CornerRadius x:Key="Tg.Radius.Pill">999</CornerRadius>
+
+    <!-- 描边粗细 -->
+    <Thickness x:Key="Tg.Window.BorderThickness">1</Thickness>
+    <Thickness x:Key="Tg.Card.BorderThickness">1</Thickness>
+
+    <!-- 字体栈（800 重为主） -->
+    <FontFamily x:Key="Tg.Font.Display">Segoe UI Variable Display, Segoe UI, Microsoft YaHei UI</FontFamily>
+    <FontFamily x:Key="Tg.Font.Num">Segoe UI Variable Display, Segoe UI, Microsoft YaHei UI</FontFamily>
+    <FontFamily x:Key="Tg.Font.Body">Segoe UI, Microsoft YaHei UI</FontFamily>
+
+    <!-- 纹理（无纹理肤 = 全透明占位，保证 DynamicResource 不断链） -->
+    <DrawingBrush x:Key="Tg.Texture.Bars">
+        <DrawingBrush.Drawing>
+            <GeometryDrawing Geometry="M0,0 L8,0 L8,7 L0,7 Z" Brush="#00FFFFFF"/>
+        </DrawingBrush.Drawing>
+    </DrawingBrush>
+    <DrawingBrush x:Key="Tg.Texture.Banner">
+        <DrawingBrush.Drawing>
+            <GeometryDrawing Geometry="M0,0 L28,0 L28,28 L0,28 Z" Brush="#00FFFFFF"/>
+        </DrawingBrush.Drawing>
+    </DrawingBrush>
+    <DrawingBrush x:Key="Tg.Texture.Grid">
+        <DrawingBrush.Drawing>
+            <GeometryDrawing Geometry="M0,0 L28,0 L28,28 L0,28 Z" Brush="#00FFFFFF"/>
+        </DrawingBrush.Drawing>
+    </DrawingBrush>
+
+    <!-- 倍率徽章（S3 琥珀块） -->
+    <SolidColorBrush x:Key="Tg.MulChip.Border" Color="#00FFFFFF"/>
+    <SolidColorBrush x:Key="Tg.MulChip.Bg" Color="#C77800"/>
+    <SolidColorBrush x:Key="Tg.MulChip.Ink" Color="#FFFFFF"/>
+    <DoubleCollection x:Key="Tg.MulChip.Dash"/>
+
+    <!-- 阴影（§3.4：S3 窗体硬偏移 8,9 · Blur 0 · 墨 .20；悬浮物 Blur 0 · Depth 6 · 墨 .22） -->
+    <DropShadowEffect x:Key="Tg.Shadow.Window" x:Shared="False"
+                      BlurRadius="0" ShadowDepth="12" Direction="312" Color="#111111" Opacity="0.20"/>
+    <DropShadowEffect x:Key="Tg.Shadow.Float" x:Shared="False"
+                      BlurRadius="0" ShadowDepth="6" Direction="315" Color="#111111" Opacity="0.22"/>
+    <DropShadowEffect x:Key="Tg.Shadow.Env" x:Shared="False"
+                      BlurRadius="0" ShadowDepth="0" Direction="270" Color="#000000" Opacity="0"/>
+
+</ResourceDictionary>

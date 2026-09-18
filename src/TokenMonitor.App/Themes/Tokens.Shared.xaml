@@ -1,0 +1,64 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!--
+      ============================================================
+      Tokens.Shared —— 布局常量 / 字号阶 / 动效时长表（03-ui-spec §2.1）
+      仅布局共享量，四肤一致；一律 StaticResource 引用。
+      皮肤差异（Brush/Color/CornerRadius/Thickness/Effect/FontFamily）
+      全部在 Skins/Skin.*.xaml，一律 DynamicResource 引用。
+      ============================================================
+    -->
+
+    <!-- 主面板基准尺寸 -->
+    <sys:Double x:Key="Tg.Pct.PanelW">760</sys:Double>
+    <sys:Double x:Key="Tg.Pct.PanelH">560</sys:Double>
+    <sys:Double x:Key="Tg.Pct.PanelMinW">720</sys:Double>
+    <sys:Double x:Key="Tg.Pct.PanelMinH">520</sys:Double>
+    <sys:Double x:Key="Tg.Pct.TitleH">46</sys:Double>
+    <sys:Double x:Key="Tg.Pct.SideW">268</sys:Double>
+    <sys:Double x:Key="Tg.Pct.Gap">10</sys:Double>
+    <sys:Double x:Key="Tg.Pct.StatusH">24</sys:Double>
+    <sys:Double x:Key="Tg.Pct.BannerH">34</sys:Double>
+    <sys:Double x:Key="Tg.Pct.BallSize">68</sys:Double>
+    <sys:Double x:Key="Tg.Pct.PillW">470</sys:Double>
+    <sys:Double x:Key="Tg.Pct.PillH">56</sys:Double>
+    <sys:Double x:Key="Tg.Pct.RingSize">88</sys:Double>
+    <sys:Double x:Key="Tg.Pct.ChartH">90</sys:Double>
+    <Thickness x:Key="Tg.Pct.PagePad">12</Thickness>
+
+    <!-- 字号阶（共享折中；各肤样例差异 ±1px 以内） -->
+    <sys:Double x:Key="Tg.Fs.Display">26</sys:Double>
+    <sys:Double x:Key="Tg.Fs.H1">16</sys:Double>
+    <sys:Double x:Key="Tg.Fs.H2">13.5</sys:Double>
+    <sys:Double x:Key="Tg.Fs.TotalUnit">9</sys:Double>
+    <sys:Double x:Key="Tg.Fs.Body">12</sys:Double>
+    <sys:Double x:Key="Tg.Fs.Data">10.5</sys:Double>
+    <sys:Double x:Key="Tg.Fs.Micro">9</sys:Double>
+
+    <!-- 动效时长表（03-ui-spec §5；毫秒）。循环动画周期为毫秒数值 -->
+    <sys:Double x:Key="Tg.Dur.Panel">240</sys:Double>
+    <sys:Double x:Key="Tg.Dur.CardIn">320</sys:Double>
+    <sys:Double x:Key="Tg.Dur.Stagger">50</sys:Double>
+    <sys:Double x:Key="Tg.Dur.Select">150</sys:Double>
+    <sys:Double x:Key="Tg.Dur.Caliber">200</sys:Double>
+    <sys:Double x:Key="Tg.Dur.CountUp">550</sys:Double>
+    <sys:Double x:Key="Tg.Dur.ChartIn">650</sys:Double>
+    <sys:Double x:Key="Tg.Dur.Banner">180</sys:Double>
+    <sys:Double x:Key="Tg.Dur.Ball">220</sys:Double>
+    <sys:Double x:Key="Tg.Dur.Hover">120</sys:Double>
+    <sys:Double x:Key="Tg.Dur.MarqueeMs">16000</sys:Double>
+    <sys:Double x:Key="Tg.Dur.RadarMs">6000</sys:Double>
+    <sys:Double x:Key="Tg.Dur.BlinkMs">1100</sys:Double>
+
+    <!-- 间距阶 -->
+    <sys:Double x:Key="Tg.Sp.XS">4</sys:Double>
+    <sys:Double x:Key="Tg.Sp.S">8</sys:Double>
+    <sys:Double x:Key="Tg.Sp.M">10</sys:Double>
+    <sys:Double x:Key="Tg.Sp.L">12</sys:Double>
+    <sys:Double x:Key="Tg.Sp.L2">13</sys:Double>
+    <sys:Double x:Key="Tg.Sp.XL">16</sys:Double>
+    <sys:Double x:Key="Tg.Sp.XXL">24</sys:Double>
+
+</ResourceDictionary>

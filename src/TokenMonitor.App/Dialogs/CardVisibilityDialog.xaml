@@ -1,0 +1,52 @@
+<dialogs:ShellDialog
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:dialogs="clr-namespace:TokenMonitor.App.Dialogs"
+        x:Class="TokenMonitor.App.Dialogs.CardVisibilityDialog"
+        HeaderTag="LAYOUT" HeaderTitle="显示隐藏卡片"
+        VersionText="勾选 = 显示 · 拖拽或 ▲▼ 排序 · 删除将清除该模型全部数据（自动备份后不可撤回）"
+        FooterHint="排序与隐藏立即写入 ui_state.json"
+        ConfirmText="完成" CancelText="取消" Width="520">
+    <dialogs:ShellDialog.Content>
+        <StackPanel>
+            <Border BorderBrush="{DynamicResource Tg.Stroke.Hair}" BorderThickness="1"
+                    CornerRadius="{DynamicResource Tg.Radius.Control}" MaxHeight="330">
+                <ListBox x:Name="List" ItemsSource="{Binding Items}" BorderThickness="0"
+                         Background="Transparent" AllowDrop="True"
+                         PreviewMouseMove="List_PreviewMouseMove"
+                         Drop="List_Drop" DragOver="List_DragOver"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Border Padding="9,5" Background="Transparent">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <CheckBox IsChecked="{Binding Visible, UpdateSourceTrigger=PropertyChanged}"
+                                              VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Key}" Margin="9,0,0,0"
+                                               Style="{StaticResource Tg.NumText}" FontSize="12"
+                                               Foreground="{DynamicResource Tg.Ink.Primary}" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                        <Button Content="▲" Style="{StaticResource Tg.Btn}" Padding="4,1" Margin="4,0,0,0"
+                                                Command="{Binding DataContext.MoveUpCommand, RelativeSource={RelativeSource AncestorType=dialogs:CardVisibilityDialog}}"
+                                                CommandParameter="{Binding}"/>
+                                        <Button Content="▼" Style="{StaticResource Tg.Btn}" Padding="4,1" Margin="3,0,0,0"
+                                                Command="{Binding DataContext.MoveDownCommand, RelativeSource={RelativeSource AncestorType=dialogs:CardVisibilityDialog}}"
+                                                CommandParameter="{Binding}"/>
+                                        <Button Content="删除" Style="{StaticResource Tg.DangerButton}" Padding="7,1" Margin="7,0,0,0"
+                                                Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=dialogs:CardVisibilityDialog}}"
+                                                CommandParameter="{Binding}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
+        </StackPanel>
+    </dialogs:ShellDialog.Content>
+</dialogs:ShellDialog>

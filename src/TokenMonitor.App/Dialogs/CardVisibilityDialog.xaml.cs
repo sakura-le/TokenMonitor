@@ -1,0 +1,131 @@
+using CommunityToolkit.Mvvm.Input;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using TokenMonitor.App.Services;
+
+namespace TokenMonitor.App.Dialogs;
+
+/// <summary>卡片条目（显示隐藏卡片对话框）。</summary>
+public sealed class CardItemVm : INotifyPropertyChanged
+{
+    private bool _visible;
+    public string Key { get; init; } = "";
+    public bool Visible { get => _visible; set { _visible = value; PropertyChanged?.Invoke(this, new(nameof(Visible))); } }
+    public event PropertyChangedEventHandler? PropertyChanged;
+}
+
+/// <summary>
+/// 对话框 7：显示隐藏卡片（01-§3-D8）：勾选 + 拖拽/▲▼ 排序 + 删除选中 + 二次确认。
+/// 完成 → card_order / hidden_cards 持久化；删除 → Engine.DeleteModelData（后台）。
+/// </summary>
+public partial class CardVisibilityDialog : ShellDialog
+{
+    private readonly AppServices _svc;
+    public ObservableCollection<CardItemVm> Items { get; } = new();
+
+    public RelayCommand<CardItemVm> MoveUpCommand { get; }
+    public RelayCommand<CardItemVm> MoveDownCommand { get; }
+    public RelayCommand<CardItemVm> DeleteCommand { get; }
+
+    public CardVisibilityDialog(AppServices svc)
+    {
+        _svc = svc;
+        MoveUpCommand = new RelayCommand<CardItemVm>(MoveUp);
+        MoveDownCommand = new RelayCommand<CardItemVm>(MoveDown);
+        DeleteCommand = new RelayCommand<CardItemVm>(Delete);
+
+        var main = _svc.Main;
+        if (main is not null)
+            foreach (var c in main.Cards)
+                Items.Add(new CardItemVm { Key = c.Key, Visible = !c.IsHidden });
+        try
+        {
+            foreach (var (p, m) in _svc.Engine.Queries.GetAllModels())
+            {
+                var key = p + "/" + m;
+                if (Items.All(i => i.Key != key))
+                    Items.Add(new CardItemVm { Key = key, Visible = main?.Cards.Any(c => c.Key == key) == true });
+            }
+        }
+        catch { /* 查询失败时仅显示当前卡片 */ }
+        OnConfirm = Done;
+    }
+
+    private void MoveUp(CardItemVm? item)
+    {
+        var i = item is null ? -1 : Items.IndexOf(item);
+        if (i > 0) Items.Move(i, i - 1);
+    }
+
+    private void MoveDown(CardItemVm? item)
+    {
+        var i = item is null ? -1 : Items.IndexOf(item);
+        if (i >= 0 && i < Items.Count - 1) Items.Move(i, i + 1);
+    }
+
+    private void Delete(CardItemVm? item)
+    {
+        if (item is null) return;
+        // 二次确认（不可撤回；数据层自动备份）
+        var r = MessageBox.Show(this, $"确认删除模型「{item.Key}」的全部数据？\n（usage_log/usage_daily/漏抓记录一并删除，删除前自动备份）",
+            "删除模型数据", MessageBoxButton.OKCancel, MessageBoxImage.Warning);
+        if (r != MessageBoxResult.OK) return;
+        Items.Remove(item);
+        var modelKey = item.Key;
+        Task.Run(() =>
+        {
+            try { _svc.Engine.DeleteModelData(modelKey); }
+            catch (Exception ex) { Core.SysUtil.Logger.Error("App", "delete model failed", ex); }
+        });
+    }
+
+    private bool Done()
+    {
+        var main = _svc.Main;
+        if (main is not null)
+        {
+            main.ApplyCardOrder(Items.Select(i => i.Key));
+            foreach (var item in Items)
+            {
+                var card = main.Cards.FirstOrDefault(c => c.Key == item.Key);
+                if (card is not null) main.SetHidden(card, !item.Visible);
+            }
+        }
+        return true;
+    }
+
+    // —— 拖拽排序 ——
+    private Point _dragStart;
+
+    private void List_PreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        if (e.LeftButton != MouseButtonState.Pressed) return;
+        var pos = e.GetPosition(null);
+        if (Math.Abs(pos.X - _dragStart.X) < 4 && Math.Abs(pos.Y - _dragStart.Y) < 4) return;
+        if (e.OriginalSource is DependencyObject src &&
+            ItemsControl.ContainerFromElement(List, src) is ListBoxItem { DataContext: CardItemVm item })
+        {
+            DragDrop.DoDragDrop(List, item, DragDropEffects.Move);
+        }
+    }
+
+    private void List_DragOver(object sender, DragEventArgs e)
+    {
+        e.Effects = e.Data.GetDataPresent(typeof(CardItemVm)) ? DragDropEffects.Move : DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private void List_Drop(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetData(typeof(CardItemVm)) is not CardItemVm payload) return;
+        if (e.OriginalSource is not DependencyObject src ||
+            ItemsControl.ContainerFromElement(List, src) is not ListBoxItem { DataContext: CardItemVm target }) return;
+        var from = Items.IndexOf(payload);
+        var to = Items.IndexOf(target);
+        if (from < 0 || to < 0 || from == to) return;
+        Items.Move(from, to);
+    }
+}

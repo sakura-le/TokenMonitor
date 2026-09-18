@@ -1,0 +1,85 @@
+<dialogs:ShellDialog
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:dialogs="clr-namespace:TokenMonitor.App.Dialogs"
+        x:Class="TokenMonitor.App.Dialogs.MultiplierConfigDialog"
+        HeaderTag="MUL" HeaderTitle="倍率配置" ModelTag="{Binding ChosenModel}"
+        VersionText="{Binding VersionBar}"
+        FooterHint="时段匹配 [Start,End) · 0.5h 粒度 · 跨午夜时段按生效口径平移"
+        ConfirmText="保存并生效" Width="580">
+    <dialogs:ShellDialog.Content>
+        <StackPanel>
+            <Grid Margin="0,0,0,11">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="190"/>
+                    <ColumnDefinition Width="14"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="模型 MODEL" Style="{StaticResource Tg.MicroLabel}" Margin="0,0,0,5"/>
+                    <ComboBox Style="{StaticResource Tg.Combo}" ItemsSource="{Binding Models}"
+                              SelectedItem="{Binding ChosenModel}"/>
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="生效日期 EFFECTIVE" Style="{StaticResource Tg.MicroLabel}" Margin="0,0,0,5"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox Style="{StaticResource Tg.Input}" Text="{Binding EffectiveFrom, UpdateSourceTrigger=PropertyChanged}"/>
+                        <Button Grid.Column="1" Content="明天" Style="{StaticResource Tg.Btn}" Margin="8,0,0,0"
+                                Command="{Binding TomorrowCommand}"/>
+                    </Grid>
+                </StackPanel>
+            </Grid>
+
+            <!-- 时段行 -->
+            <Border BorderBrush="{DynamicResource Tg.Stroke.Strong}" BorderThickness="1"
+                    CornerRadius="{DynamicResource Tg.Radius.Control}" Padding="12,10"
+                    Background="{DynamicResource Tg.Bg.Card}">
+                <StackPanel>
+                    <ItemsControl ItemsSource="{Binding Periods}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="26"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="30"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox Style="{StaticResource Tg.Input}" Text="{Binding Start, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <TextBlock Grid.Column="1" Text="→" TextAlignment="Center" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource Tg.Ink.Faint}"/>
+                                    <TextBox Grid.Column="2" Style="{StaticResource Tg.Input}" Text="{Binding End, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <Button Grid.Column="3" Content="✕" Style="{StaticResource Tg.Btn}" Padding="0" Width="24"
+                                            Command="{Binding DataContext.RemovePeriodCommand, RelativeSource={RelativeSource AncestorType=dialogs:MultiplierConfigDialog}}"
+                                            CommandParameter="{Binding}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Button Content="+ 添加时段行" Style="{StaticResource Tg.Btn}" Padding="12,4"
+                            HorizontalAlignment="Left" Margin="0,8,0,0" Command="{Binding AddPeriodCommand}"/>
+                    <Grid Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="130"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="倍率 RATE" Style="{StaticResource Tg.MicroLabel}" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Style="{StaticResource Tg.Input}" Text="{Binding Rate, UpdateSourceTrigger=PropertyChanged}"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Local 口径 UTC↔Local 换算提示 -->
+            <Border Margin="0,10,0,0" Padding="10,7" CornerRadius="{DynamicResource Tg.Radius.Control}"
+                    Background="{DynamicResource Tg.Bg.Inset}"
+                    Visibility="{Binding LocalHint, Converter={StaticResource NullVis}}">
+                <TextBlock Text="{Binding LocalHint}" FontSize="10" TextWrapping="Wrap"
+                           Foreground="{DynamicResource Tg.WarnInk}" FontFamily="{DynamicResource Tg.Font.Num}"/>
+            </Border>
+        </StackPanel>
+    </dialogs:ShellDialog.Content>
+</dialogs:ShellDialog>

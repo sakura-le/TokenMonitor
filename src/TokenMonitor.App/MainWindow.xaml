@@ -1,12 +1,376 @@
-﻿<Window x:Class="TokenMonitor.App.MainWindow"
+<Window x:Class="TokenMonitor.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:TokenMonitor.App"
-        mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        xmlns:controls="clr-namespace:TokenMonitor.App.Controls"
+        xmlns:infra="clr-namespace:TokenMonitor.App.Infrastructure"
+        Title="Token Monitor" Width="760" Height="560" MinWidth="720" MinHeight="520"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        ShowInTaskbar="True" ShowActivated="True" ResizeMode="CanResize"
+        TextOptions.TextFormattingMode="Display" UseLayoutRounding="True">
 
-    </Grid>
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome GlassFrameThickness="0" CaptionHeight="46" ResizeBorderThickness="6"
+                            CornerRadius="0" UseAeroCaptionButtons="False"/>
+    </shell:WindowChrome.WindowChrome>
+
+    <Border x:Name="RootBorder" CornerRadius="{DynamicResource Tg.Radius.Window}"
+            Background="{DynamicResource Tg.Bg.Window}"
+            BorderBrush="{DynamicResource Tg.Stroke.Strong}"
+            BorderThickness="{DynamicResource Tg.Window.BorderThickness}"
+            Effect="{DynamicResource Tg.Shadow.Window}"
+            ClipToBounds="False">
+        <Grid>
+            <!-- S2 面板网格纹理 / S4 云朵 -->
+            <Rectangle Fill="{DynamicResource Tg.Texture.Grid}" IsHitTestVisible="False"/>
+            <Ellipse x:Name="Cloud1" Fill="#E6FFFFFF" Width="300" Height="150" HorizontalAlignment="Right"
+                     VerticalAlignment="Top" Margin="0,-40,-40,0" IsHitTestVisible="False"
+                     Visibility="{Binding IsSkySkin, Source={x:Static infra:SkinFlags.Instance}, Converter={StaticResource BoolVis}}"/>
+            <Ellipse x:Name="Cloud2" Fill="#A6FFFFFF" Width="260" Height="140" HorizontalAlignment="Left"
+                     VerticalAlignment="Bottom" Margin="-40,0,0,-50" IsHitTestVisible="False"
+                     Visibility="{Binding IsSkySkin, Source={x:Static infra:SkinFlags.Instance}, Converter={StaticResource BoolVis}}"/>
+
+            <Grid Margin="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="46"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- ============ C-01 TitleBar ============ -->
+                <Grid Grid.Row="0" Background="{DynamicResource Tg.Bg.TitleBar}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                                        <Grid.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="显示隐藏卡片…" Style="{StaticResource Tg.MenuItem}"
+                                      Command="{Binding OpenCardVisibilityCommand}"/>
+                            <MenuItem Header="操作日志（全部）" Style="{StaticResource Tg.MenuItem}"
+                                      Command="{Binding OpenOpLogsCommand}" CommandParameter="{x:Null}"/>
+                        </ContextMenu>
+                    </Grid.ContextMenu>
+
+                    <StackPanel Orientation="Horizontal" Margin="14,0,0,0" VerticalAlignment="Center">
+                        <Border Width="20" Height="20" CornerRadius="{DynamicResource Tg.Radius.Control}"
+                                Background="{DynamicResource Tg.Accent.Brand}">
+                            <Grid>
+                                <Rectangle Width="7" Height="7" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                           Margin="3,3,0,0" Fill="{DynamicResource Tg.OnAccent}" RadiusX="1" RadiusY="1"/>
+                                <Rectangle Width="10" Height="4" HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                                           Margin="3,0,0,4" Fill="{DynamicResource Tg.OnAccent}" Opacity="0.85" RadiusX="1" RadiusY="1"/>
+                            </Grid>
+                        </Border>
+                        <TextBlock Text="Token Monitor" Margin="9,0,0,0" FontFamily="{DynamicResource Tg.Font.Display}"
+                                   FontSize="14.5" FontWeight="Bold" Foreground="{DynamicResource Tg.Ink.Primary}"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding ListenText}" Margin="9,1,0,0" FontFamily="{DynamicResource Tg.Font.Num}"
+                                   FontSize="9.5" Foreground="{DynamicResource Tg.Ink.Faint}" VerticalAlignment="Center"/>
+                        <Ellipse Width="7" Height="7" Margin="9,0,0,0" VerticalAlignment="Center"
+                                 Fill="{DynamicResource Tg.State.Ok}"/>
+                    </StackPanel>
+
+                    <!-- 标题栏右键菜单（§1.5 第三层） -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,12,0" VerticalAlignment="Center"
+                                shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Border Style="{StaticResource Tg.Badge}" BorderThickness="1" Padding="8,2"
+                                BorderBrush="{DynamicResource Tg.State.Info}" Background="{DynamicResource Tg.Bg.Inset}">
+                            <TextBlock Text="{Binding CaliberBadgeText}" FontSize="10.5" FontWeight="Bold"
+                                       FontFamily="{DynamicResource Tg.Font.Num}"
+                                       Foreground="{DynamicResource Tg.State.Info}"/>
+                        </Border>
+                        <TextBlock Text="透明" Style="{StaticResource Tg.MicroLabel}" Margin="10,0,4,0"
+                                   FontFamily="{DynamicResource Tg.Font.Body}"/>
+                        <Slider Style="{StaticResource Tg.Slider}" Width="62" Minimum="0.5" Maximum="1.0"
+                                Value="{Binding PanelOpacity}" VerticalAlignment="Center"/>
+                        <ToggleButton x:Name="TopmostToggle" Content="置顶" Style="{StaticResource Tg.ChromeToggle}"
+                                      Margin="9,0,0,0" IsChecked="{Binding IsTopmost}"
+                                      Command="{Binding ToggleTopmostCommand}"
+                                      CommandParameter="{Binding IsChecked, RelativeSource={RelativeSource Self}}"/>
+                        <Button Content="收起到球" Style="{StaticResource Tg.Btn}" Margin="6,0,0,0"
+                                Command="{Binding CollapseCommand}"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- ============ C-02 MissedBanner ============ -->
+                <Grid Grid.Row="1" x:Name="BannerHost" Height="34" ClipToBounds="True"
+                      Visibility="{Binding Banner.Visible, Converter={StaticResource BoolVis}}">
+                    <controls:MissedBanner Margin="12,4,12,5"
+                                           Count="{Binding Banner.Count}" Text="{Binding Banner.Text}"
+                                           GoCommand="{Binding BannerGoCommand}"
+                                           CloseCommand="{Binding BannerCloseCommand}"/>
+                </Grid>
+
+                <!-- ============ 主体：卡片区 + DetailSide ============ -->
+                <Grid Grid.Row="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="268"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border BorderBrush="{DynamicResource Tg.Stroke.Hair}" BorderThickness="0,0,1,0">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ItemsControl x:Name="CardsHost" Margin="10" Focusable="False">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Columns="2" HorizontalAlignment="Stretch">
+                                            <UniformGrid.Style>
+                                                <Style TargetType="UniformGrid">
+                                                    <Setter Property="Columns" Value="2"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource WidthCols}}" Value="3">
+                                                            <Setter Property="Columns" Value="3"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </UniformGrid.Style>
+                                        </UniformGrid>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <controls:ModelCard Margin="0,0,0,0"
+                                            MouseRightButtonDown="Card_MouseRightButton"
+                                            MouseLeftButtonDown="Card_MouseLeftButton"
+                                            ProviderText="{Binding ProviderTag}"
+                                            ProviderKind="{Binding ProviderKind}"
+                                            ModelName="{Binding Model}"
+                                            RequestCountText="{Binding RequestCountText}"
+                                            DeltaText="{Binding DeltaText}"
+                                            TotalText="{Binding TotalText}"
+                                            TotalUnitText="{Binding TotalUnitText}"
+                                            MissCount="{Binding MissCount}"
+                                            MulBadgeText="{Binding MulBadgeText}"
+                                            RatioH="{Binding RatioH}" RatioHText="{Binding RatioHText}"
+                                            RatioM="{Binding RatioM}" RatioMText="{Binding RatioMText}"
+                                            RatioO="{Binding RatioO}" RatioOText="{Binding RatioOText}"
+                                            IsSelected="{Binding IsSelected}"
+                                            IsUtc="{Binding IsUtc}"
+                                            IsMultiplier="{Binding MultiplierView}"
+                                            SerialText="{Binding SerialText}"
+                                            CaliberDotText="{Binding DotText}"
+                                            ToggleCaliberCommand="{Binding ToggleCaliberCommand}"
+                                            SetActualViewCommand="{Binding SetActualViewCommand}"
+                                            SetMulViewCommand="{Binding SetMulViewCommand}"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                                <ItemsControl.ContextMenu>
+                                    <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                        <MenuItem Header="倍率配置…" Style="{StaticResource Tg.MenuItem}"
+                                                  Command="{Binding OpenMultiplierCommand}" CommandParameter="{Binding SelectedCard.Key}"/>
+                                        <MenuItem Header="计价配置…" Style="{StaticResource Tg.MenuItem}"
+                                                  Command="{Binding OpenPricingCommand}" CommandParameter="{Binding SelectedCard.Key}"/>
+                                        <Separator Style="{StaticResource Tg.MenuSeparator}"/>
+                                        <MenuItem Header="手动补录…" Style="{StaticResource Tg.MenuItem}"
+                                                  Command="{Binding OpenCalibrateCommand}" CommandParameter="{Binding SelectedCard.Key}"/>
+                                        <MenuItem Header="操作日志" Style="{StaticResource Tg.MenuItem}"
+                                                  Command="{Binding OpenOpLogsCommand}" CommandParameter="{Binding SelectedCard.Key}"/>
+                                        <MenuItem Header="导出数据" Style="{StaticResource Tg.MenuItem}"
+                                                  Command="{Binding OpenExportCommand}"/>
+                                        <MenuItem Header="打开配置文件" Style="{StaticResource Tg.MenuItem}"
+                                                  Command="{Binding OpenConfigFileCommand}"/>
+                                        <Separator Style="{StaticResource Tg.MenuSeparator}"/>
+                                        <MenuItem Header="重置今日…" Style="{StaticResource Tg.MenuItemDanger}"
+                                                  Command="{Binding ResetTodayCommand}" CommandParameter="{Binding SelectedCard.Key}"/>
+                                    </ContextMenu>
+                                </ItemsControl.ContextMenu>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Border>
+
+                    <!-- DetailSide 268 -->
+                    <Border Grid.Column="1" Background="{DynamicResource Tg.Bg.Inset}" Padding="13,11">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Grid Grid.Row="0" Margin="0,0,0,9">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="▸" Foreground="{DynamicResource Tg.Accent.Brand}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Side.HeadText}" Margin="5,0,0,0"
+                                               FontFamily="{DynamicResource Tg.Font.Display}" FontSize="13.5"
+                                               FontWeight="Bold" Foreground="{DynamicResource Tg.Ink.Primary}"
+                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding Side.ScopeTag}" HorizontalAlignment="Right"
+                                           Style="{StaticResource Tg.MicroLabel}"/>
+                            </Grid>
+
+                            <Grid Grid.Row="1" Margin="0,0,0,9">
+                                <StackPanel Orientation="Horizontal">
+                                    <controls:RingGauge Width="88" Height="88" Fraction="{Binding Side.RingFraction}"
+                                                        PercentText="{Binding Side.RingPercentText}"
+                                                        Caption="{Binding Side.RingCaption}"/>
+                                    <StackPanel VerticalAlignment="Center" Margin="12,0,0,0">
+                                        <TextBlock Text="缓存命中率" FontFamily="{DynamicResource Tg.Font.Display}"
+                                                   FontSize="13" FontWeight="Bold"
+                                                   Foreground="{DynamicResource Tg.Ring.Stroke}"/>
+                                        <TextBlock Text="命中 ÷ (命中+未命中)" Style="{StaticResource Tg.MicroLabel}"
+                                                   Margin="0,3,0,0" FontFamily="{DynamicResource Tg.Font.Body}"/>
+                                        <TextBlock Text="{Binding Side.LastUpdateText}" Style="{StaticResource Tg.MicroLabel}"
+                                                   Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Grid>
+
+                            <Border Grid.Row="2" Margin="0,0,0,9" BorderBrush="{DynamicResource Tg.Stroke.Hair}"
+                                    BorderThickness="0,1,0,1" Padding="0,3">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
+                                    </Grid.RowDefinitions>
+                                    <Grid Grid.Row="0" Margin="0,2">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Rectangle Width="6" Height="6" RadiusX="2" RadiusY="2" VerticalAlignment="Center"
+                                                       Fill="{DynamicResource Tg.Chart.H}"/>
+                                            <TextBlock Text=" 缓存命中" Style="{StaticResource Tg.MicroLabel}"
+                                                       FontFamily="{DynamicResource Tg.Font.Body}" FontSize="11"/>
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding Side.StatHitText}" HorizontalAlignment="Right"
+                                                   Style="{StaticResource Tg.NumText}" FontSize="12.5"
+                                                   Foreground="{DynamicResource Tg.Ink.Primary}"/>
+                                    </Grid>
+                                    <Grid Grid.Row="1" Margin="0,2">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Rectangle Width="6" Height="6" RadiusX="2" RadiusY="2" VerticalAlignment="Center"
+                                                       Fill="{DynamicResource Tg.Chart.M}"/>
+                                            <TextBlock Text=" 未命中" Style="{StaticResource Tg.MicroLabel}"
+                                                       FontFamily="{DynamicResource Tg.Font.Body}" FontSize="11"/>
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding Side.StatMissText}" HorizontalAlignment="Right"
+                                                   Style="{StaticResource Tg.NumText}" FontSize="12.5"
+                                                   Foreground="{DynamicResource Tg.Ink.Primary}"/>
+                                    </Grid>
+                                    <Grid Grid.Row="2" Margin="0,2">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Rectangle Width="6" Height="6" RadiusX="2" RadiusY="2" VerticalAlignment="Center"
+                                                       Fill="{DynamicResource Tg.Chart.O}"/>
+                                            <TextBlock Text=" 输出" Style="{StaticResource Tg.MicroLabel}"
+                                                       FontFamily="{DynamicResource Tg.Font.Body}" FontSize="11"/>
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding Side.StatOutputText}" HorizontalAlignment="Right"
+                                                   Style="{StaticResource Tg.NumText}" FontSize="12.5"
+                                                   Foreground="{DynamicResource Tg.Ink.Primary}"/>
+                                    </Grid>
+                                    <Grid Grid.Row="3" Margin="0,2">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Rectangle Width="6" Height="6" RadiusX="2" RadiusY="2" VerticalAlignment="Center"
+                                                       Fill="{DynamicResource Tg.Ink.Faint}"/>
+                                            <TextBlock Text=" 推理" Style="{StaticResource Tg.MicroLabel}"
+                                                       FontFamily="{DynamicResource Tg.Font.Body}" FontSize="11"/>
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding Side.StatReasoningText}" HorizontalAlignment="Right"
+                                                   Style="{StaticResource Tg.NumText}" FontSize="12.5"
+                                                   Foreground="{DynamicResource Tg.Ink.Primary}"/>
+                                    </Grid>
+                                </Grid>
+                            </Border>
+
+                            <Border Grid.Row="3" BorderBrush="{DynamicResource Tg.Stroke.Hair}" BorderThickness="1"
+                                    CornerRadius="{DynamicResource Tg.Radius.Card}"
+                                    Background="{DynamicResource Tg.Bg.Panel}" Padding="8,5" Margin="0,0,0,9">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid Margin="0,0,0,3">
+                                        <TextBlock Text="近 7 日 TOTAL" FontSize="8.5" Style="{StaticResource Tg.MicroLabel}"/>
+                                        <TextBlock Text="UNIT: AUTO" FontSize="8.5" Style="{StaticResource Tg.MicroLabel}"
+                                                   HorizontalAlignment="Right"/>
+                                    </Grid>
+                                    <controls:TrendChart7 x:Name="Trend" Grid.Row="1"/>
+                                </Grid>
+                            </Border>
+
+                            <Grid Grid.Row="4" Margin="0,0,0,9">
+                                <Grid x:Name="CostA" Visibility="{Binding Side.CostNormal, Converter={StaticResource BoolVis}}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition/><ColumnDefinition/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Margin="0,0,4,0" BorderBrush="{DynamicResource Tg.Stroke.Strong}"
+                                            BorderThickness="1" CornerRadius="{DynamicResource Tg.Radius.Control}"
+                                            Background="{DynamicResource Tg.Bg.Panel}" Padding="9,4,9,5">
+                                        <StackPanel>
+                                            <TextBlock Text="CNY · 今日" FontSize="8.5" Style="{StaticResource Tg.MicroLabel}"/>
+                                            <TextBlock Text="{Binding Side.CostCnyText}" Style="{StaticResource Tg.NumText}"
+                                                       FontSize="17" FontWeight="Bold"
+                                                       Foreground="{DynamicResource Tg.Accent.Brand}"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Grid.Column="1" Margin="4,0,0,0" BorderBrush="{DynamicResource Tg.Stroke.Strong}"
+                                            BorderThickness="1" CornerRadius="{DynamicResource Tg.Radius.Control}"
+                                            Background="{DynamicResource Tg.Bg.Panel}" Padding="9,4,9,5">
+                                        <StackPanel>
+                                            <TextBlock Text="USD · 今日" FontSize="8.5" Style="{StaticResource Tg.MicroLabel}"/>
+                                            <TextBlock Text="{Binding Side.CostUsdText}" Style="{StaticResource Tg.NumText}"
+                                                       FontSize="17" FontWeight="Bold"
+                                                       Foreground="{DynamicResource Tg.State.Info}"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                                <Grid x:Name="CostB" Visibility="{Binding Side.CostUnpriced, Converter={StaticResource BoolVis}}"
+                                      Background="{DynamicResource Tg.Bg.Panel}">
+                                    <Rectangle RadiusX="9" RadiusY="9" Stroke="{DynamicResource Tg.Stroke.Strong}" StrokeThickness="1"
+                                               StrokeDashArray="3 2"/>
+                                    <StackPanel Margin="9,6">
+                                        <TextBlock Text="{Binding Side.UnpricedText}" FontFamily="{DynamicResource Tg.Font.Body}"
+                                                   FontSize="10" Foreground="{DynamicResource Tg.WarnInk}" FontWeight="Bold"/>
+                                        <TextBlock Text="— —" Style="{StaticResource Tg.NumText}" FontSize="15"
+                                                   Foreground="{DynamicResource Tg.Ink.Faint}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Grid>
+
+                            <controls:DualClockControl Grid.Row="5"
+                                                       Zone1Label="UTC" Zone1Time="{Binding Detail.UtcClock}"
+                                                       Zone2Label="{Binding Detail.LocalLabel}"
+                                                       Zone2Time="{Binding Detail.LocalClock}"/>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <!-- ============ 状态条 ============ -->
+                <Border Grid.Row="3" Height="24" Background="{DynamicResource Tg.Bg.Status}"
+                        BorderBrush="{DynamicResource Tg.Stroke.Hair}" BorderThickness="0,1,0,0">
+                    <Grid>
+                    <StackPanel Orientation="Horizontal" Margin="12,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding StatusText}" FontSize="10" Style="{StaticResource Tg.MicroLabel}"
+                                   Foreground="{DynamicResource Tg.State.Ok}"/>
+                        <TextBlock Text="│" Margin="10,0" Foreground="{DynamicResource Tg.Stroke.Hair}"/>
+                        <TextBlock Text="事件总线 200ms" Style="{StaticResource Tg.MicroLabel}"/>
+                        <TextBlock Text="│" Margin="10,0" Foreground="{DynamicResource Tg.Stroke.Hair}"/>
+                        <TextBlock Text="{Binding ListenText, StringFormat=监听 {0}}" Style="{StaticResource Tg.MicroLabel}"/>
+                        <TextBlock Text="│" Margin="10,0" Foreground="{DynamicResource Tg.Stroke.Hair}"/>
+                        <TextBlock Text="{Binding LastRefreshText, StringFormat=上次刷新 {0}}" Style="{StaticResource Tg.MicroLabel}"/>
+                    </StackPanel>
+                    <Rectangle Style="{StaticResource Tg.StatusCursor}" HorizontalAlignment="Right" Margin="0,0,14,0">
+                        <Rectangle.Triggers>
+                            <EventTrigger RoutedEvent="Rectangle.Loaded">
+                                <BeginStoryboard HandoffBehavior="SnapshotAndReplace">
+                                    <Storyboard RepeatBehavior="Forever">
+                                        <DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="Opacity">
+                                            <DiscreteDoubleKeyFrame KeyTime="0:0:0" Value="1"/>
+                                            <DiscreteDoubleKeyFrame KeyTime="0:0:0.55" Value="0"/>
+                                            <DiscreteDoubleKeyFrame KeyTime="0:0:1.1" Value="1"/>
+                                        </DoubleAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </Rectangle.Triggers>
+                    </Rectangle>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+    </Border>
 </Window>

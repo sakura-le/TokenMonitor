@@ -1,0 +1,32 @@
+<dialogs:ShellDialog
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:dialogs="clr-namespace:TokenMonitor.App.Dialogs"
+        x:Class="TokenMonitor.App.Dialogs.ImportDialog"
+        HeaderTag="IMPORT" HeaderTitle="导入旧数据"
+        VersionText="源：旧三进程项目 data/（token_monitor.db + config/pricing/settings.json）"
+        FooterHint="导入前自动备份新库 · usage_daily 由 log 重算 · API 密钥默认不迁移"
+        ConfirmText="开始导入" Width="560">
+    <dialogs:ShellDialog.Content>
+        <StackPanel>
+            <TextBlock Text="旧数据目录 LEGACY DATA DIR" Style="{StaticResource Tg.MicroLabel}" Margin="0,0,0,5"/>
+            <Grid Margin="0,0,0,11">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBox Style="{StaticResource Tg.Input}" Text="{Binding DirText, UpdateSourceTrigger=PropertyChanged}"/>
+                <Button Grid.Column="1" Content="浏览…" Style="{StaticResource Tg.Btn}" Margin="8,0,0,0" Click="Browse_Click"/>
+            </Grid>
+            <CheckBox Content="迁移 API 密钥（DPAPI 加密落盘）" IsChecked="{Binding MigrateKeys}"
+                      Foreground="{DynamicResource Tg.Ink.Second}" Margin="0,0,0,6"/>
+            <CheckBox Content="替换模式（清空现有数据后全量导入；默认合并仅导入更新的）" IsChecked="{Binding ReplaceAll}"
+                      Foreground="{DynamicResource Tg.Ink.Second}" Margin="0,0,0,11"/>
+            <Button Content="扫描预览" Style="{StaticResource Tg.Btn}" Padding="12,5" HorizontalAlignment="Left"
+                    Click="Preview_Click"/>
+            <TextBox Style="{StaticResource Tg.Input}" Text="{Binding PreviewText, Mode=OneWay}" IsReadOnly="True"
+                     Margin="0,10,0,0" MinHeight="86" TextWrapping="Wrap" AcceptsReturn="True"
+                     VerticalContentAlignment="Top"/>
+        </StackPanel>
+    </dialogs:ShellDialog.Content>
+</dialogs:ShellDialog>
