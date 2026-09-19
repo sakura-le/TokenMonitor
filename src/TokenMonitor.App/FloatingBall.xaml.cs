@@ -11,8 +11,8 @@ namespace TokenMonitor.App;
 
 /// <summary>
 /// 悬浮球窗口（03-ui-spec §4）：透明分层窗口，两态（收起 Ø68 / 展开 470×56 胶囊）。
-/// 拖拽 + 12px 屏幕边缘磁吸（180ms 回弹落位）；双击回主面板；右键 = 托盘菜单；
-/// 透明度/置顶按 settings；跑马灯动画不因数据刷新重置（MarqueeStrip 保证）。
+/// 拖拽 + 12px 屏幕边缘磁吸（180ms 回弹落位）；左键单击切换形态、双击回主面板；
+/// 右键 = 托盘菜单；透明度/置顶按 settings；跑马灯动画不因数据刷新重置（MarqueeStrip 保证）。
 /// </summary>
 public partial class FloatingBall : Window
 {
@@ -29,8 +29,10 @@ public partial class FloatingBall : Window
         ballRadar.ApplyAnimationClock(RotateTransform.AngleProperty, _radarClock);
     }
     private bool _expanded;
-    private bool _preferExpanded;   // 静息形态：false=圆球（默认），true=跑马灯栏；hover 临时展开
+    private bool _preferExpanded;   // 静息形态：false=圆球（默认），true=跑马灯栏；左键单击切换
     private bool _dragging;
+    private DateTime _lastClickAt = DateTime.MinValue;   // 单击/双击仲裁
+    private DispatcherTimer? _clickTimer;
     private Point _dragOffset;
     private bool _movedBeyondClick;
 
@@ -44,10 +46,9 @@ public partial class FloatingBall : Window
         PreviewMouseLeftButtonDown += OnMouseDown;
         PreviewMouseMove += OnMouseMove;
         PreviewMouseLeftButtonUp += OnMouseUp;
-        MouseDoubleClick += (_, _) => _svc.ShowPanel();
-        // hover 自动展开跑马灯、离开回落到静息形态（托盘可切换静息形态）
-        MouseEnter += (_, _) => { if (!_dragging) SetExpanded(true); if (_expanded) Strip.Pause(); };
-        MouseLeave += (_, _) => { if (!_dragging) SetExpanded(_preferExpanded); if (_expanded) Strip.Resume(); };
+        // 形态切换 = 左键单击（双击回面板，由 OnMouseUp 内做双击仲裁）。
+        // 不用 hover 自动展开：透明分层窗口在"光标下移位"时会收到假 Leave/Enter，
+        // hover 驱动几何切换必然球/跑马灯交替闪烁。
     }
 
     private BallViewModel Vm => _vm ??= (BallViewModel)DataContext;
@@ -138,6 +139,10 @@ public partial class FloatingBall : Window
 
         if (expanded)
         {
+            // 取消在途淡出动画并复位透明度——否则旧 fade 的 Completed 回调
+            // 会把刚展开的胶囊重新藏起（快速点击时球/胶囊交替闪现）
+            Pill.BeginAnimation(OpacityProperty, null);
+            Pill.Opacity = 1;
             Pill.Visibility = Visibility.Visible;
             BallFace.Visibility = Visibility.Collapsed;
             Strip.Start();
@@ -146,8 +151,9 @@ public partial class FloatingBall : Window
         {
             BallFace.Visibility = Visibility.Visible;
             Strip.Stop();
+            Pill.BeginAnimation(OpacityProperty, null);
             var fade = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(110));
-            fade.Completed += (_, _) => { Pill.Visibility = Visibility.Collapsed; Pill.Opacity = 1; };
+            fade.Completed += (_, _) => { if (!_expanded) { Pill.Visibility = Visibility.Collapsed; Pill.Opacity = 1; } };
             Pill.BeginAnimation(OpacityProperty, fade);
         }
     }
@@ -223,10 +229,33 @@ public partial class FloatingBall : Window
         if (st is not null) { st.ScaleX = st.ScaleY = 1.0; }
         if (_movedBeyondClick)
         {
+            _clickTimer?.Stop();
+            _clickTimer = null;
             SnapToEdge();
             _svc.UiState.Save(null, this, null);
+            return;
+        }
+        // 单击=切换形态，双击=回主面板（手动仲裁：捕获鼠标后 WPF 双击事件不可靠）
+        var now = DateTime.UtcNow;
+        if ((now - _lastClickAt).TotalMilliseconds <= GetDoubleClickTime())
+        {
+            _lastClickAt = DateTime.MinValue;
+            _clickTimer?.Stop();
+            _clickTimer = null;
+            _svc.ShowPanel();
+        }
+        else
+        {
+            _lastClickAt = now;
+            _clickTimer?.Stop();
+            _clickTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(GetDoubleClickTime() + 60) };
+            _clickTimer.Tick += (_, _) => { _clickTimer!.Stop(); _clickTimer = null; ToggleShape(); };
+            _clickTimer.Start();
         }
     }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern uint GetDoubleClickTime();
 
     /// <summary>接近屏幕边缘 12px 磁吸，180ms 回弹落位（窗口恒高 68，横向按当前宽度贴边）。</summary>
     private void SnapToEdge()
