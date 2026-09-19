@@ -75,7 +75,7 @@ public partial class PricingConfigDialog : ShellDialog
 
     public PricingConfigDialog(AppServices svc)
     {
-        InitializeComponent();
+        // 命令先于 InitializeComponent 赋值（见 CardVisibilityDialog 同注）
         _svc = svc;
         AddRuleCommand = new RelayCommand(AddRule);
         RemoveRuleCommand = new RelayCommand<PriceRuleVm>(r => { if (r is not null) Rules.Remove(r); });
@@ -84,6 +84,7 @@ public partial class PricingConfigDialog : ShellDialog
             if (p is null) return;
             foreach (var r in Rules) r.Periods.Remove(p);
         });
+        InitializeComponent();
 
         var names = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var k in _svc.Engine.Pricing.Document.Pricing.Keys) names.Add(k);
@@ -106,6 +107,8 @@ public partial class PricingConfigDialog : ShellDialog
     {
         set => ChosenModel = value ?? "";
     }
+
+    private void AddRule_Click(object sender, RoutedEventArgs e) => AddRule();
 
     private void AddRule()
     {

@@ -42,36 +42,27 @@ public sealed class DialogService
     /// <summary>模态宿主：遮罩（非置顶）→ 关闭菜单/释放捕获 → ShowDialog（Owner 归属，不用 Topmost）。</summary>
     private void ShowCore(Window dlg, Action<Window>? onClosed = null)
     {
-        OverlayWindow? overlay = null;
         try
         {
+            var owner = _svc.PanelWindow;
             CloseOpenMenus();
             try { Mouse.Capture(null); } catch { }
 
-            var owner = _svc.PanelWindow;
-            if (owner is { IsVisible: true })
-            {
-                overlay = new OverlayWindow(owner);
-                overlay.Show();
-                dlg.Owner = owner;
-                dlg.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-            }
-            else
-            {
-                dlg.WindowStartupLocation = WindowStartupLocation.CenterScreen;
-            }
-            dlg.Topmost = owner is not { IsVisible: true };
+            // 最终配置：Topmost=true 让对话框进入置顶带（压过置顶面板/悬浮球，点击才能落进来），
+            // 但不设 Owner（Owner+Topmost+遮罩的组合实测会令 ShowDialog 永久挂起）、不建遮罩。
+            dlg.WindowStartupLocation = owner is { IsVisible: true }
+                ? WindowStartupLocation.CenterOwner
+                : WindowStartupLocation.CenterScreen;
+            dlg.Topmost = true;
+            Core.SysUtil.Logger.Info("Dialog", "即将 ShowDialog (" + dlg.GetType().Name + ")");
             dlg.ShowDialog();
+            Core.SysUtil.Logger.Info("Dialog", "ShowDialog 返回: " + dlg.GetType().Name);
             onClosed?.Invoke(dlg);
         }
         catch (Exception ex)
         {
             Core.SysUtil.Logger.Error("App", "dialog failed", ex);
             MessageBox.Show("操作失败：" + ex.Message, "Token Monitor", MessageBoxButton.OK, MessageBoxImage.Warning);
-        }
-        finally
-        {
-            try { overlay?.Close(); } catch { }
         }
     }
 

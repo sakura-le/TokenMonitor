@@ -32,11 +32,13 @@ public partial class CardVisibilityDialog : ShellDialog
 
     public CardVisibilityDialog(AppServices svc)
     {
-        InitializeComponent();
+        // 命令必须先于 InitializeComponent 赋值：{ get; } 属性无变更通知，
+        // XAML 在 InitializeComponent 时一次性求值，晚赋值会让命令绑定永久为 null（按钮点击无反应）
         _svc = svc;
         MoveUpCommand = new RelayCommand<CardItemVm>(MoveUp);
         MoveDownCommand = new RelayCommand<CardItemVm>(MoveDown);
         DeleteCommand = new RelayCommand<CardItemVm>(Delete);
+        InitializeComponent();
 
         var main = _svc.Main;
         if (main is not null)

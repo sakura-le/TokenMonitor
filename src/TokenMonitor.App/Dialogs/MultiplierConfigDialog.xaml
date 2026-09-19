@@ -61,7 +61,7 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                     <Button Content="+ 添加时段行" Style="{StaticResource Tg.Btn}" Padding="12,4"
-                            HorizontalAlignment="Left" Margin="0,8,0,0" Command="{Binding AddPeriodCommand}"/>
+                            HorizontalAlignment="Left" Margin="0,8,0,0" Click="AddPeriod_Click"/>
                     <Grid Margin="0,10,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="130"/>

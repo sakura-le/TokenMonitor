@@ -135,7 +135,7 @@
                 </ItemsControl>
 
                 <Button Content="+ 添加规则卡" Style="{StaticResource Tg.Btn}" Padding="12,5"
-                        HorizontalAlignment="Left" Command="{Binding AddRuleCommand}"/>
+                        HorizontalAlignment="Left" Click="AddRule_Click"/>
             </StackPanel>
         </ScrollViewer>
     </dialogs:ShellDialog.Content>

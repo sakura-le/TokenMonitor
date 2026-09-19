@@ -56,14 +56,18 @@ public partial class MultiplierConfigDialog : ShellDialog
     public RelayCommand<PeriodRowVm> RemovePeriodCommand { get; }
     public RelayCommand TomorrowCommand { get; }
 
+    private void AddPeriod_Click(object sender, RoutedEventArgs e)
+        => Periods.Add(new PeriodRowVm { Start = "00:00", End = "08:00" });
+
     public MultiplierConfigDialog(AppServices svc)
     {
-        InitializeComponent();
+        // 命令先于 InitializeComponent 赋值（见 CardVisibilityDialog 同注）
         _svc = svc;
         AddPeriodCommand = new RelayCommand(() => Periods.Add(new PeriodRowVm { Start = "00:00", End = "08:00" }));
         RemovePeriodCommand = new RelayCommand<PeriodRowVm>(p => { if (p is not null) Periods.Remove(p); });
         TomorrowCommand = new RelayCommand(() =>
             EffectiveFrom = DateTime.Today.AddDays(1).ToString("yyyy-MM-dd"));
+        InitializeComponent();
 
         // 模型候选：pricing.json 键 + 出现过的模型（不含 provider 前缀）
         var names = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
