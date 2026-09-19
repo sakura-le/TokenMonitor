@@ -207,7 +207,7 @@
     </Style>
     <Style x:Key="Tg.Slider" TargetType="Slider">
         <Setter Property="Height" Value="14"/>
-        <Setter Property="Minimum" Value="0.6"/>
+        <Setter Property="Minimum" Value="0.2"/>
         <Setter Property="Maximum" Value="1.0"/>
         <Setter Property="IsMoveToPointEnabled" Value="True"/>
         <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
@@ -435,7 +435,7 @@
                                IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
                                PopupAnimation="None">
                             <Border Background="{DynamicResource Tg.Bg.Panel}"
-                                    BorderBrush="{DynamicResource Tg.Stroke.Strong}" BorderThickness="1"
+                                    BorderThickness="0"
                                     CornerRadius="{DynamicResource Tg.Radius.Dialog}" Padding="5" Margin="10"
                                     SnapsToDevicePixels="True"
                                     Effect="{DynamicResource Tg.Shadow.Float}">
@@ -486,7 +486,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="ContextMenu">
                     <Border Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
+                            BorderThickness="0"
                             CornerRadius="{DynamicResource Tg.Radius.Menu}"
                             Padding="4" Effect="{DynamicResource Tg.Shadow.Float}"
                             SnapsToDevicePixels="True">
@@ -769,28 +769,10 @@
             </StackPanel>
         </StackPanel>
     </DataTemplate>
+    <!-- 上翻式信息条：视觉行模板；滚动/停留节奏由 MarqueeStrip 自管理（用户要求：每项 5 秒上翻） -->
     <Style TargetType="controls:MarqueeStrip">
         <Setter Property="ItemTemplate" Value="{StaticResource Tg.MarqueeItemTemplate}"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="controls:MarqueeStrip">
-                    <Border ClipToBounds="True">
-                        <Border.OpacityMask>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                <GradientStop Color="#00FFFFFF" Offset="0"/>
-                                <GradientStop Color="#FFFFFFFF" Offset="0.05"/>
-                                <GradientStop Color="#FFFFFFFF" Offset="0.95"/>
-                                <GradientStop Color="#00FFFFFF" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Border.OpacityMask>
-                        <StackPanel x:Name="PART_Rail" Orientation="Horizontal">
-                            <ItemsControl ItemsSource="{TemplateBinding ItemsSource}" ItemTemplate="{TemplateBinding ItemTemplate}"><ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel></ItemsControl>
-                            <ItemsControl ItemsSource="{TemplateBinding ItemsSource}" ItemTemplate="{TemplateBinding ItemTemplate}"><ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel></ItemsControl>
-                        </StackPanel>
-                    </Border>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
+        <Setter Property="Background" Value="Transparent"/>
     </Style>
 
     <!-- ============ S2 状态条闪烁光标（Loaded blink 在实例处；激增 0.45s 由样式触发） ============ -->
@@ -889,7 +871,8 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{DynamicResource Tg.Stroke.Hair}"
                                 BorderThickness="{DynamicResource Tg.Card.BorderThickness}"
-                                Padding="11,9,12,9" Margin="0">
+                                Padding="11,9,12,9" Margin="0"
+                                infra:RoundClip.Enabled="True" infra:RoundClip.Radius="{DynamicResource Tg.Radius.Card}">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>

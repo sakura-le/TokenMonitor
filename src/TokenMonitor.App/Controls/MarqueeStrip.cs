@@ -1,27 +1,28 @@
+using System.Collections.Specialized;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media.Animation;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Threading;
 
 namespace TokenMonitor.App.Controls;
 
 /// <summary>
-/// 悬浮球展开态跑马灯（03-ui-spec §4 展开态）。
-/// 内容整条复制两份，TranslateTransform.X 0→-50% 16s Linear 永动；
-/// 数据 1s 刷新只改文本不重置动画（动画挂在 Rail 的 RenderTransform 上，
-/// ItemsSource 原地更新不触发动画重建）；鼠标悬停 Pause；两端 5% 渐隐遮罩由模板 OpacityMask 提供。
+/// 悬浮球展开态信息条（上翻式逐项滚动，用户要求取代横向跑马灯）：
+/// 每项数据停留 5 秒 → 280ms 上翻切到下一项，循环。
+/// 实现：双 ContentPresenter 交换——每次动画结束把位移复位到固定值（0 / RowH），
+/// 不做累计平移，杜绝累计漂移导致整条滚出可视区的问题。
+/// 数据 1s 原地刷新不打断节奏；条目增删时重建并保持节奏。
 /// </summary>
-[TemplatePart(Name = PartRail, Type = typeof(FrameworkElement))]
-public class MarqueeStrip : Control
+public class MarqueeStrip : Border
 {
-    public const string PartRail = "PART_Rail";
-
     public static readonly DependencyProperty ItemsSourceProperty = DependencyProperty.Register(
         nameof(ItemsSource), typeof(System.Collections.IEnumerable), typeof(MarqueeStrip),
-        new PropertyMetadata(null));
+        new PropertyMetadata(null, (d, _) => ((MarqueeStrip)d).Rebuild()));
 
     public static readonly DependencyProperty ItemTemplateProperty = DependencyProperty.Register(
-        nameof(ItemTemplate), typeof(DataTemplate), typeof(MarqueeStrip), new PropertyMetadata(null));
+        nameof(ItemTemplate), typeof(DataTemplate), typeof(MarqueeStrip),
+        new PropertyMetadata(null, (d, _) => ((MarqueeStrip)d).Rebuild()));
 
     public System.Collections.IEnumerable? ItemsSource
     { get => (System.Collections.IEnumerable?)GetValue(ItemsSourceProperty); set => SetValue(ItemsSourceProperty, value); }
@@ -29,59 +30,131 @@ public class MarqueeStrip : Control
     public DataTemplate? ItemTemplate
     { get => (DataTemplate?)GetValue(ItemTemplateProperty); set => SetValue(ItemTemplateProperty, value); }
 
-    private Panel? _rail;
-    private AnimationClock? _clock;
+    /// <summary>每项停留时长（用户要求 5 秒）。</summary>
+    public TimeSpan Dwell { get; set; } = TimeSpan.FromSeconds(5);
+    /// <summary>上翻动画时长。</summary>
+    public TimeSpan RollDuration { get; set; } = TimeSpan.FromMilliseconds(280);
+    private const double RowH = 52;
 
-    static MarqueeStrip() => DefaultStyleKeyProperty.OverrideMetadata(typeof(MarqueeStrip),
-        new FrameworkPropertyMetadata(typeof(MarqueeStrip)));
+    private readonly Canvas _stage = new();
+    private readonly ContentPresenter _cur = new();
+    private readonly ContentPresenter _next = new();
+    private readonly System.Collections.Generic.List<object> _items = new();
+    private INotifyCollectionChanged? _observed;
+    private DispatcherTimer? _dwell;
+    private int _index;
+    private bool _rolling;
 
     public MarqueeStrip()
     {
-        Loaded += (_, _) => StartAnimation();
-        Unloaded += (_, _) => StopAnimation();
+        ClipToBounds = true;
+        _cur.Height = RowH;
+        _next.Height = RowH;
+        Canvas.SetLeft(_cur, 4); Canvas.SetLeft(_next, 4);
+        Canvas.SetTop(_cur, 0); Canvas.SetTop(_next, RowH);
+        _next.Opacity = 0;
+        _stage.Children.Add(_cur);
+        _stage.Children.Add(_next);
+        Child = _stage;
+        Loaded += (_, _) => Rebuild();
+        Unloaded += (_, _) => StopDwell();
     }
 
-    public override void OnApplyTemplate()
+    private System.Collections.IList? List => ItemsSource as System.Collections.IList;
+
+    private void Rebuild()
     {
-        base.OnApplyTemplate();
-        _rail = GetTemplateChild(PartRail) as Panel;
-        if (_rail is not null)
+        ObserveCollection();
+        _items.Clear();
+        if (List is not null)
+            foreach (var it in List) _items.Add(it);
+        _index = 0;
+        _cur.Content = _next.Content = null;
+        if (_items.Count > 0)
         {
-            _rail.RenderTransform = new TranslateTransform();
-            _rail.SizeChanged += (_, _) => StartAnimation();
+            _cur.Content = _items[0];
+            _cur.ContentTemplate = ItemTemplate;
         }
-        MouseEnter += (_, _) => Pause();
-        MouseLeave += (_, _) => Resume();
-        StartAnimation();
+        Restart();
     }
 
-    /// <summary>外部控制（悬浮球展开时启动；悬停暂停）。</summary>
-    public void Start() => StartAnimation();
-    public void Stop() => StopAnimation();
-    public void Pause() { try { _clock?.Controller.Pause(); } catch { } }
-    public void Resume() { try { _clock?.Controller.Resume(); } catch { } }
-
-    private void StartAnimation()
+    private void ObserveCollection()
     {
-        if (_rail is null || !IsLoaded || ActualWidth <= 0) return;
-        StopAnimation();
-        // 周期按 §5 表（16s Linear 循环）；半宽 = 单份内容宽
-        var half = _rail.ActualWidth / 2.0;
-        if (half <= 0) return;
-        var duration = TimeSpan.FromMilliseconds(
-            (double)(Application.Current?.TryFindResource("Tg.Dur.MarqueeMs") ?? 16000.0));
-        var anim = new DoubleAnimation(0, -half, duration)
+        if (_observed is not null)
         {
-            RepeatBehavior = RepeatBehavior.Forever
-        };
-        var clock = anim.CreateClock();
-        _clock = clock;
-        ((TranslateTransform)_rail.RenderTransform).ApplyAnimationClock(TranslateTransform.XProperty, clock);
+            _observed.CollectionChanged -= OnCollectionChanged;
+            _observed = null;
+        }
+        if (ItemsSource is INotifyCollectionChanged n)
+        {
+            _observed = n;
+            n.CollectionChanged += OnCollectionChanged;
+        }
     }
 
-    private void StopAnimation()
+    private void OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => Rebuild();
+
+    /// <summary>外部控制（悬浮球展开时启动；收起停止）。</summary>
+    public void Start() => Rebuild();
+    public void Stop() => StopDwell();
+    public void Pause() { try { _dwell?.Stop(); } catch { } }
+    public void Resume() { try { if (!_rolling) _dwell?.Start(); } catch { } }
+
+    private void Restart()
     {
-        try { _clock?.Controller.Remove(); } catch { /* 已停止 */ }
-        _clock = null;
+        StopDwell();
+        ResetPositions();
+        if (_items.Count <= 1 || !IsLoaded) return;
+        _dwell = new DispatcherTimer { Interval = Dwell };
+        _dwell.Tick += (_, _) => RollOnce();
+        _dwell.Start();
+    }
+
+    private void StopDwell()
+    {
+        try { _dwell?.Stop(); } catch { }
+        _dwell = null;
+    }
+
+    private void ResetPositions()
+    {
+        _cur.BeginAnimation(Canvas.TopProperty, null);
+        _next.BeginAnimation(Canvas.TopProperty, null);
+        _next.BeginAnimation(OpacityProperty, null);
+        Canvas.SetTop(_cur, 0);
+        Canvas.SetTop(_next, RowH);
+        _next.Opacity = 0;
+    }
+
+    private void RollOnce()
+    {
+        if (_rolling || _items.Count <= 1) return;
+        _rolling = true;
+        var nextIdx = (_index + 1) % _items.Count;
+        _next.Content = _items[nextIdx];
+        _next.ContentTemplate = ItemTemplate;
+        _next.Opacity = 1;
+        Canvas.SetTop(_next, RowH);
+
+        var ease = new QuadraticEase { EasingMode = EasingMode.EaseInOut };
+        var aCur = new DoubleAnimation(-RowH, RollDuration) { EasingFunction = ease, FillBehavior = FillBehavior.HoldEnd };
+        var aNext = new DoubleAnimation(0, RollDuration) { EasingFunction = ease, FillBehavior = FillBehavior.HoldEnd };
+        int done = 0;
+        void OnOneDone(object? s, EventArgs e)
+        {
+            if (Interlocked.Increment(ref done) < 2) return;
+            // 交换：_cur 承接新内容，双呈现器复位到固定值（无累计漂移）
+            _index = nextIdx;
+            _cur.BeginAnimation(Canvas.TopProperty, null);
+            _next.BeginAnimation(Canvas.TopProperty, null);
+            _cur.Content = _items[_index];
+            _cur.ContentTemplate = ItemTemplate;
+            ResetPositions();
+            _rolling = false;
+        }
+        aCur.Completed += OnOneDone;
+        aNext.Completed += OnOneDone;
+        _cur.BeginAnimation(Canvas.TopProperty, aCur);
+        _next.BeginAnimation(Canvas.TopProperty, aNext);
     }
 }

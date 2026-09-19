@@ -79,15 +79,10 @@ public sealed class ThemeService
         "EditorialInk" => "浅色 · 米纸账本：衬线标题 + 印章红 + 细规线",
         "GraphiteTerminal" => "深色 · 纯平仪表：等宽字形 + 磷绿 + 刻度标尺",
         "SwissGrid" => "浅色 · 数据海报：粗黑大数字 + 红蓝双色 + 柔角白卡",
-        "SkyHud" => "天青 · 座舱 HUD：雷达扫描 + 尾焰橙 + 瞄准框",
+        "SkyHud" => "天蓝 · 座舱 HUD：天空蓝主色 + 雷达扫描 + 尾焰橙点睛",
         _ => "",
     };
 
-    /// <summary>透明度滑杆下限（§3.3：S1/S3 ≥0.6、S2 ≥0.7、S4 ≥0.65）。</summary>
-    public double MinOpacity => _current switch
-    {
-        "GraphiteTerminal" => 0.7,
-        "SkyHud" => 0.65,
-        _ => 0.6,
-    };
+    /// <summary>透明度下限：全皮肤统一 0.2（对齐原版 20-255 全范围可调）。</summary>
+    public double MinOpacity => 0.2;
 }

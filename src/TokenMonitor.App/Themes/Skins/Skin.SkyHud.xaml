@@ -4,8 +4,8 @@
 
     <!--
       ============================================================
-      Skin 4 · SkyHud 苍穹空域（天青浅底 · 座舱 HUD）
-      雷达扫描 + 尾焰橙 + 瞄准框；全员大圆角与圆头线帽。
+      Skin 4 · SkyHud 苍穹空域（天蓝主导 · 座舱 HUD）
+      主体色 = 天空蓝渐变；尾焰橙仅作点睛；雷达扫描 + 瞄准框；全员大圆角与圆头线帽。
       令牌唯一权威：design/03-ui-spec.md §2.2 / §3.4
       ============================================================
     -->
@@ -14,49 +14,49 @@
 
     <!-- 背景：天青云白渐变（云朵椭圆由窗口模板在 IsSkySkin 时叠加） -->
     <LinearGradientBrush x:Key="Tg.Bg.Window" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Color="#DCECFA" Offset="0"/>
-        <GradientStop Color="#F3F9FF" Offset="0.42"/>
-        <GradientStop Color="#E7F2FC" Offset="1"/>
+        <GradientStop Color="#9CCBF0" Offset="0"/>
+        <GradientStop Color="#C6E3FA" Offset="0.45"/>
+        <GradientStop Color="#A8D2F2" Offset="1"/>
     </LinearGradientBrush>
-    <SolidColorBrush x:Key="Tg.Bg.Panel" Color="#EBFFFFFF"/>
-    <SolidColorBrush x:Key="Tg.Bg.Card" Color="#EBFFFFFF"/>
-    <SolidColorBrush x:Key="Tg.Bg.CardSel" Color="#FFFFFF"/>
-    <SolidColorBrush x:Key="Tg.Bg.Inset" Color="#F2F8FE"/>
-    <SolidColorBrush x:Key="Tg.Bg.TitleBar" Color="#8CFFFFFF"/>
-    <SolidColorBrush x:Key="Tg.Bg.Status" Color="#66FFFFFF"/>
-    <SolidColorBrush x:Key="Tg.Mask" Color="#8010304F"/>
+    <SolidColorBrush x:Key="Tg.Bg.Panel" Color="#E8F2FCEB"/>
+    <SolidColorBrush x:Key="Tg.Bg.Card" Color="#EAF5FFEB"/>
+    <SolidColorBrush x:Key="Tg.Bg.CardSel" Color="#F7FCFF"/>
+    <SolidColorBrush x:Key="Tg.Bg.Inset" Color="#DDEFFB"/>
+    <SolidColorBrush x:Key="Tg.Bg.TitleBar" Color="#A6D6F8B8"/>
+    <SolidColorBrush x:Key="Tg.Bg.Status" Color="#77CBE9FA"/>
+    <SolidColorBrush x:Key="Tg.Mask" Color="#800E4C7E"/>
 
     <!-- 描边（1.5px 海军蓝细环） -->
-    <SolidColorBrush x:Key="Tg.Stroke.Strong" Color="#6610304F"/>
-    <SolidColorBrush x:Key="Tg.Stroke.Hair" Color="#2910304F"/>
-    <SolidColorBrush x:Key="Tg.Stroke.Hover" Color="#6610304F"/>
+    <SolidColorBrush x:Key="Tg.Stroke.Strong" Color="#802B7CC9"/>
+    <SolidColorBrush x:Key="Tg.Stroke.Hair" Color="#3D2B7CC9"/>
+    <SolidColorBrush x:Key="Tg.Stroke.Hover" Color="#802B7CC9"/>
 
     <!-- 文字 -->
-    <SolidColorBrush x:Key="Tg.Ink.Primary" Color="#10304F"/>
-    <SolidColorBrush x:Key="Tg.Ink.Second" Color="#48688C"/>
-    <SolidColorBrush x:Key="Tg.Ink.Faint" Color="#93A9C4"/>
+    <SolidColorBrush x:Key="Tg.Ink.Primary" Color="#0C3B66"/>
+    <SolidColorBrush x:Key="Tg.Ink.Second" Color="#3F6D99"/>
+    <SolidColorBrush x:Key="Tg.Ink.Faint" Color="#7FA8CC"/>
 
     <!-- 强调 -->
-    <SolidColorBrush x:Key="Tg.Accent.Brand" Color="#FF5A1F"/>
-    <SolidColorBrush x:Key="Tg.Accent.Soft" Color="#FDECE4"/>
+    <SolidColorBrush x:Key="Tg.Accent.Brand" Color="#1E90E0"/>
+    <SolidColorBrush x:Key="Tg.Accent.Soft" Color="#D9ECFC"/>
     <SolidColorBrush x:Key="Tg.OnAccent" Color="#FFFFFF"/>
 
     <!-- 图表 -->
-    <SolidColorBrush x:Key="Tg.Chart.H" Color="#1B7BD6"/>
+    <SolidColorBrush x:Key="Tg.Chart.H" Color="#1E90E0"/>
     <SolidColorBrush x:Key="Tg.Chart.M" Color="#E23A26"/>
     <SolidColorBrush x:Key="Tg.Chart.O" Color="#10304F"/>
-    <SolidColorBrush x:Key="Tg.Chart.Line" Color="#1B7BD6"/>
+    <SolidColorBrush x:Key="Tg.Chart.Line" Color="#1E90E0"/>
     <SolidColorBrush x:Key="Tg.Chart.LineDot" Color="#FF5A1F"/>
-    <SolidColorBrush x:Key="Tg.Chart.Grid" Color="#D7E7F6"/>
-    <SolidColorBrush x:Key="Tg.Ring.Stroke" Color="#1B7BD6"/>
-    <SolidColorBrush x:Key="Tg.Ring.Track" Color="#E3EEF8"/>
+    <SolidColorBrush x:Key="Tg.Chart.Grid" Color="#B7DBF6"/>
+    <SolidColorBrush x:Key="Tg.Ring.Stroke" Color="#1E90E0"/>
+    <SolidColorBrush x:Key="Tg.Ring.Track" Color="#CDE4F8"/>
 
     <!-- 语义色（UTC 口径文字 #B26A00） -->
     <SolidColorBrush x:Key="Tg.State.Danger" Color="#E23A26"/>
     <SolidColorBrush x:Key="Tg.State.Warn" Color="#F5A623"/>
     <SolidColorBrush x:Key="Tg.WarnInk" Color="#B26A00"/>
     <SolidColorBrush x:Key="Tg.State.Ok" Color="#18A05E"/>
-    <SolidColorBrush x:Key="Tg.State.Info" Color="#1B7BD6"/>
+    <SolidColorBrush x:Key="Tg.State.Info" Color="#1E90E0"/>
 
     <!-- 漏抓横幅（警戒斜纹底纹由模板叠加） -->
     <SolidColorBrush x:Key="Tg.Banner.Bg" Color="#FDECE4"/>
@@ -66,7 +66,7 @@
 
     <!-- 提供商徽章 -->
     <SolidColorBrush x:Key="Tg.Provider.Glm" Color="#10304F"/>
-    <SolidColorBrush x:Key="Tg.Provider.DeepSeek" Color="#1B7BD6"/>
+    <SolidColorBrush x:Key="Tg.Provider.DeepSeek" Color="#1265B8"/>
     <SolidColorBrush x:Key="Tg.Provider.Qwen" Color="#5C6BC0"/>
     <SolidColorBrush x:Key="Tg.Provider.Default" Color="#18A05E"/>
 
@@ -118,10 +118,10 @@
 
     <!-- 阴影（§3.4：S4 窗体 Blur 28 · Depth 12 · 海军 .28；环境影 Blur 10 · Depth 3 · #1B5A96 .10） -->
     <DropShadowEffect x:Key="Tg.Shadow.Window" x:Shared="False"
-                      BlurRadius="28" ShadowDepth="12" Direction="270" Color="#10304F" Opacity="0.28"/>
+                      BlurRadius="26" ShadowDepth="10" Direction="270" Color="#0E5A9E" Opacity="0.30"/>
     <DropShadowEffect x:Key="Tg.Shadow.Float" x:Shared="False"
-                      BlurRadius="28" ShadowDepth="12" Direction="270" Color="#10304F" Opacity="0.28"/>
+                      BlurRadius="26" ShadowDepth="10" Direction="270" Color="#0E5A9E" Opacity="0.30"/>
     <DropShadowEffect x:Key="Tg.Shadow.Env" x:Shared="False"
-                      BlurRadius="10" ShadowDepth="3" Direction="270" Color="#1B5A96" Opacity="0.10"/>
+                      BlurRadius="10" ShadowDepth="3" Direction="270" Color="#1B7CC9" Opacity="0.12"/>
 
 </ResourceDictionary>
