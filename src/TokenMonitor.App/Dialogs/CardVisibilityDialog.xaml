@@ -13,6 +13,7 @@
                     CornerRadius="{DynamicResource Tg.Radius.Control}" MaxHeight="330">
                 <ListBox x:Name="List" ItemsSource="{Binding Items}" BorderThickness="0"
                          Background="Transparent" AllowDrop="True"
+                         PreviewMouseLeftButtonDown="List_PreviewMouseLeftButtonDown"
                          PreviewMouseMove="List_PreviewMouseMove"
                          Drop="List_Drop" DragOver="List_DragOver"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">

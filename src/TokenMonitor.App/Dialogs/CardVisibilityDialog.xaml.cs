@@ -103,6 +103,12 @@ public partial class CardVisibilityDialog : ShellDialog
     // —— 拖拽排序 ——
     private Point _dragStart;
 
+    /// <summary>记录拖拽起点。此前 _dragStart 从未赋值（恒为 0,0），
+    /// 导致任何带左键的鼠标移动都越过阈值直接触发 DoDragDrop，
+    /// 把点击劫持成拖拽 → 复选框/▲▼/删除全部点不动。</summary>
+    private void List_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        => _dragStart = e.GetPosition(null);
+
     private void List_PreviewMouseMove(object sender, MouseEventArgs e)
     {
         if (e.LeftButton != MouseButtonState.Pressed) return;
