@@ -23,6 +23,7 @@ public partial class TimeRangeDialog : ShellDialog
 
     public TimeRangeDialog(AppServices svc)
     {
+        InitializeComponent();
         _svc = svc;
         OnConfirm = ConfirmRange;
     }

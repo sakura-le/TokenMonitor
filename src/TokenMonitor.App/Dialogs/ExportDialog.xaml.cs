@@ -31,6 +31,7 @@ public partial class ExportDialog : ShellDialog
 
     public ExportDialog(AppServices svc)
     {
+        InitializeComponent();
         _svc = svc;
         PresetBox.Items.Add("今日");
         PresetBox.Items.Add("本月");

@@ -58,6 +58,7 @@ public partial class MultiplierConfigDialog : ShellDialog
 
     public MultiplierConfigDialog(AppServices svc)
     {
+        InitializeComponent();
         _svc = svc;
         AddPeriodCommand = new RelayCommand(() => Periods.Add(new PeriodRowVm { Start = "00:00", End = "08:00" }));
         RemovePeriodCommand = new RelayCommand<PeriodRowVm>(p => { if (p is not null) Periods.Remove(p); });

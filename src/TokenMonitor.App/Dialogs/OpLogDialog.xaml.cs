@@ -22,6 +22,7 @@ public partial class OpLogDialog : ShellDialog
 
     public OpLogDialog(AppServices svc)
     {
+        InitializeComponent();
         _svc = svc;
         Loaded += (_, _) => Load();
         OnConfirm = () => true;

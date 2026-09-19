@@ -16,27 +16,39 @@ public sealed record TrayMenuCallbacks(
     Action ExportToday, Action ExportMonth, Action ExportRecent7Days, Action OpenExportDir,
     Action ManualCalibrate, Action RollbackLastCalibration, Action ReloadConfig,
     Action ToggleAutoStart, Action<int> BallOpacitySelected,
-    Action ToggleBallTopmost, Action ImportLegacy, Action Exit);
+    Action ToggleBallTopmost, Action ToggleBallShape, Action ImportLegacy, Action Exit);
 
 /// <summary>
 /// C-11 TrayMenu —— Hardcodet NotifyIcon 托盘全项菜单（01-§3-E1 + 03-ui-spec §1.5）。
 /// 状态行 / 打开面板 / 打开配置文件 / 倍率 / 计价 / 统计时区(53 项单选) / 生效日期基准 /
 /// 导出(今日·本月·近7日·今日小时明细·打开导出目录) / 手动补录 / 校准回滚 / 重载配置 /
-/// 开机自启 / 悬浮球(透明度 40-100 + 置顶) / 导入旧数据 / 皮肤(4 项单选) / 退出。
-/// Menu 实例同时供悬浮球右键共享。
+/// 开机自启 / 悬浮球(切换形态 + 透明度 40-100 + 置顶) / 导入旧数据 / 皮肤(4 项单选) / 退出。
+/// 可靠性规则（修复"菜单共享实例导致焦点异常"）：托盘与悬浮球各持一份独立 ContextMenu 实例，
+/// 同一构建函数、同一回调；勾选/状态刷新同步应用到两份。
 /// </summary>
 public sealed class TrayController : IDisposable
 {
+    /// <summary>单份菜单实例 + 其可刷新控件引用。</summary>
+    private sealed class MenuRefs
+    {
+        public ContextMenu Menu = null!;
+        public MenuItem? Status, EffUtc, EffLocal, AutoStart, BallTopmost, Rollback;
+        public readonly List<MenuItem> TzItems = new();
+        public readonly List<(MenuItem Item, int Percent)> BallOpacity = new();
+        public readonly List<(MenuItem Item, string Key)> Skins = new();
+    }
+
     private readonly AppServices _svc;
     private TaskbarIcon? _icon;
     private TrayMenuCallbacks? _cb;
-    private readonly List<MenuItem> _tzItems = new();
-    private MenuItem? _miUtcMode, _miLocalMode, _miAutoStart, _miBallTopmost;
-    private readonly List<(MenuItem Item, int Percent)> _ballOpacityItems = new();
-    private readonly List<(MenuItem Item, string Key)> _skinItems = new();
-    private MenuItem? _miRollback, _miStatus;
+    private MenuRefs _tray = null!;
+    private MenuRefs _ball = null!;
 
-    public ContextMenu? Menu => _icon?.ContextMenu;
+    /// <summary>托盘用菜单（DialogService 的菜单关闭屏障读取它）。</summary>
+    public ContextMenu? Menu => _tray?.Menu;
+
+    /// <summary>悬浮球右键用菜单（独立实例，避免跨 PlacementTarget 共享）。</summary>
+    public ContextMenu? BallMenu => _ball?.Menu;
 
     public TrayController(AppServices svc) => _svc = svc;
 
@@ -50,7 +62,9 @@ public sealed class TrayController : IDisposable
             Visibility = Visibility.Visible,
         };
         _icon.TrayMouseDoubleClick += (_, _) => _cb.OpenPanel();
-        _icon.ContextMenu = BuildMenu();
+        _tray = BuildMenu(callbacks);
+        _icon.ContextMenu = _tray.Menu;
+        _ball = BuildMenu(callbacks);
     }
 
     private static Icon? TryGetIcon()
@@ -64,14 +78,14 @@ public sealed class TrayController : IDisposable
         catch { return SystemIcons.Application; }
     }
 
-    private ContextMenu BuildMenu()
+    private MenuRefs BuildMenu(TrayMenuCallbacks cb)
     {
-        var cb = _cb!;
+        var r = new MenuRefs();
         var menu = new ContextMenu();
 
         // 状态行（禁用态）
-        _miStatus = new MenuItem { Header = "● 代理运行中 · --", IsEnabled = false, FontWeight = FontWeights.Bold };
-        menu.Items.Add(_miStatus);
+        r.Status = new MenuItem { Header = "● 代理运行中 · --", IsEnabled = false, FontWeight = FontWeights.Bold };
+        menu.Items.Add(r.Status);
         menu.Items.Add(new Separator { Style = (Style)System.Windows.Application.Current.FindResource("Tg.MenuSeparator") });
 
         menu.Items.Add(Item("打开面板", cb.OpenPanel));
@@ -83,22 +97,22 @@ public sealed class TrayController : IDisposable
 
         // 统计时区子菜单（-720..840 每 30 分钟 = 53 项）
         var tz = new MenuItem { Header = "统计时区", Style = (Style)System.Windows.Application.Current.FindResource("Tg.MenuItem") };
-        foreach (var off in _svc.Engine.Config is null ? TimezoneDefaults() : SysOffsets())
+        foreach (var off in AllOffsets())
         {
             var captured = off;
             var mi = Item(Fmt.OffsetLabel(off) + (off == 480 ? " · 北京" : ""), () => cb.TimezoneSelected(captured));
             mi.IsCheckable = true;
-            _tzItems.Add(mi);
+            r.TzItems.Add(mi);
             tz.Items.Add(mi);
         }
         menu.Items.Add(tz);
 
         // 生效日期基准
         var eff = new MenuItem { Header = "生效日期基准", Style = (Style)System.Windows.Application.Current.FindResource("Tg.MenuItem") };
-        _miUtcMode = Item("UTC（按协调世界时解释）", cb.ToggleEffectiveMode);
-        _miLocalMode = Item("LOCAL（按本地时区解释）", cb.ToggleEffectiveMode);
-        eff.Items.Add(_miUtcMode);
-        eff.Items.Add(_miLocalMode);
+        r.EffUtc = Item("UTC（按协调世界时解释）", cb.ToggleEffectiveMode);
+        r.EffLocal = Item("LOCAL（按本地时区解释）", cb.ToggleEffectiveMode);
+        eff.Items.Add(r.EffUtc);
+        eff.Items.Add(r.EffLocal);
         menu.Items.Add(eff);
         menu.Items.Add(Sep());
 
@@ -113,30 +127,31 @@ public sealed class TrayController : IDisposable
         menu.Items.Add(export);
 
         menu.Items.Add(Item("手动补录…", cb.ManualCalibrate));
-        _miRollback = Item("校准回滚", cb.RollbackLastCalibration);
-        menu.Items.Add(_miRollback);
+        r.Rollback = Item("校准回滚", cb.RollbackLastCalibration);
+        menu.Items.Add(r.Rollback);
         menu.Items.Add(Item("重载配置", cb.ReloadConfig));
         menu.Items.Add(Sep());
 
-        _miAutoStart = Item("开机自启", cb.ToggleAutoStart);
-        _miAutoStart.IsCheckable = true;
-        menu.Items.Add(_miAutoStart);
+        r.AutoStart = Item("开机自启", cb.ToggleAutoStart);
+        r.AutoStart.IsCheckable = true;
+        menu.Items.Add(r.AutoStart);
 
         // 悬浮球子菜单
         var ball = new MenuItem { Header = "悬浮球", Style = (Style)System.Windows.Application.Current.FindResource("Tg.MenuItem") };
+        ball.Items.Add(Item("切换形态（圆球 / 跑马灯栏）", cb.ToggleBallShape));
         var opSub = new MenuItem { Header = "透明度", Style = (Style)System.Windows.Application.Current.FindResource("Tg.MenuItem") };
         foreach (var pct in new[] { 40, 60, 80, 100 })
         {
             var captured = pct;
             var mi = Item(pct + "%", () => cb.BallOpacitySelected(captured));
             mi.IsCheckable = true;
-            _ballOpacityItems.Add((mi, pct));
+            r.BallOpacity.Add((mi, pct));
             opSub.Items.Add(mi);
         }
         ball.Items.Add(opSub);
-        _miBallTopmost = Item("窗口置顶", cb.ToggleBallTopmost);
-        _miBallTopmost.IsCheckable = true;
-        ball.Items.Add(_miBallTopmost);
+        r.BallTopmost = Item("窗口置顶", cb.ToggleBallTopmost);
+        r.BallTopmost.IsCheckable = true;
+        ball.Items.Add(r.BallTopmost);
         menu.Items.Add(ball);
 
         menu.Items.Add(Item("导入旧数据…", cb.ImportLegacy));
@@ -149,31 +164,20 @@ public sealed class TrayController : IDisposable
             var captured = key;
             var mi = Item($"{ThemeService.DisplayName(key)}　{ThemeService.Description(key)}", () => _svc.Theme.ApplySkin(captured));
             mi.IsCheckable = true;
-            _skinItems.Add((mi, key));
+            r.Skins.Add((mi, key));
             skin.Items.Add(mi);
         }
         menu.Items.Add(skin);
         menu.Items.Add(Sep());
         menu.Items.Add(DangerItem("退出", cb.Exit));
-        return menu;
+
+        r.Menu = menu;
+        return r;
     }
 
-    private IReadOnlyList<int> SysOffsets()
-    {
-        try { return _svc.Engine is null ? TimezoneDefaults() : AllOffsets(); }
-        catch { return TimezoneDefaults(); }
-    }
-
-    private IReadOnlyList<int> AllOffsets()
+    private static IReadOnlyList<int> AllOffsets()
     {
         // ISysUtil.TimezoneOffsets() 在 Engine 内部；契约允许 App 直接列（-720..840 步长 30）
-        var list = new List<int>();
-        for (var m = -720; m <= 840; m += 30) list.Add(m);
-        return list;
-    }
-
-    private static IReadOnlyList<int> TimezoneDefaults()
-    {
         var list = new List<int>();
         for (var m = -720; m <= 840; m += 30) list.Add(m);
         return list;
@@ -201,42 +205,48 @@ public sealed class TrayController : IDisposable
     /// <summary>更新状态行文案（ProxyStateChanged）。</summary>
     public void SetStatus(bool isListening, string listenAddr, string? error)
     {
-        if (_miStatus is null) return;
+        if (_tray is null) return;
         var state = isListening ? "代理运行中" : "代理已停止" + (error is null ? "" : " · " + error);
-        _miStatus.Header = (isListening ? "● " : "○ ") + state + " · " + listenAddr;
+        var header = (isListening ? "● " : "○ ") + state + " · " + listenAddr;
+        foreach (var m in new[] { _tray, _ball })
+            if (m.Status is not null) m.Status.Header = header;
     }
 
-    /// <summary>刷新勾选态（ConfigChanged 后与启动时）。</summary>
+    /// <summary>刷新勾选态（ConfigChanged 后与启动时）；同步应用到托盘与球两份菜单。</summary>
     public void RefreshChecks()
     {
         try
         {
             var s = _svc.Engine.Config.Settings;
             var offset = s.OffsetMin;
-            foreach (var mi in _tzItems)
-            {
-                var label = ((string)mi.Header).Split(" ·")[0];
-                mi.IsChecked = label == Fmt.OffsetLabel(offset);
-            }
             var localMode = s.EffectiveDateMode == "local";
-            if (_miUtcMode is not null) _miUtcMode.IsChecked = !localMode;
-            if (_miLocalMode is not null) _miLocalMode.IsChecked = localMode;
 
             // 开机自启
-            if (_miAutoStart is not null) _miAutoStart.IsChecked = IsAutoStart();
+            var autoOn = IsAutoStart();
 
             // 球透明度（settings.ball_opacity 0-255 → 最近档）
             var pct = s.BallOpacity <= 0 ? 100 : (int)Math.Round(s.BallOpacity / 255.0 * 100);
-            var nearest = _ballOpacityItems.OrderBy(x => Math.Abs(x.Percent - pct)).First().Percent;
-            foreach (var (item, p) in _ballOpacityItems) item.IsChecked = p == nearest;
-            if (_miBallTopmost is not null) _miBallTopmost.IsChecked = s.BallTopmost;
-
-            // 皮肤
-            foreach (var (item, key) in _skinItems) item.IsChecked = key == _svc.Theme.Current;
 
             // 校准回滚可用态
-            try { SetRollbackEnabled(_svc.Engine.Calibration.State.HasCalibrated); }
-            catch { /* state 读取失败保持现状 */ }
+            bool? rollback = null;
+            try { rollback = _svc.Engine.Calibration.State.HasCalibrated; } catch { /* 读取失败保持现状 */ }
+
+            foreach (var m in new[] { _tray, _ball })
+            {
+                foreach (var mi in m.TzItems)
+                {
+                    var label = ((string)mi.Header).Split(" ·")[0];
+                    mi.IsChecked = label == Fmt.OffsetLabel(offset);
+                }
+                if (m.EffUtc is not null) m.EffUtc.IsChecked = !localMode;
+                if (m.EffLocal is not null) m.EffLocal.IsChecked = localMode;
+                if (m.AutoStart is not null) m.AutoStart.IsChecked = autoOn;
+                var nearest = m.BallOpacity.OrderBy(x => Math.Abs(x.Percent - pct)).First().Percent;
+                foreach (var (item, p) in m.BallOpacity) item.IsChecked = p == nearest;
+                if (m.BallTopmost is not null) m.BallTopmost.IsChecked = s.BallTopmost;
+                foreach (var (item, key) in m.Skins) item.IsChecked = key == _svc.Theme.Current;
+                if (rollback is not null && m.Rollback is not null) m.Rollback.IsEnabled = rollback.Value;
+            }
         }
         catch (Exception ex)
         {
@@ -254,7 +264,9 @@ public sealed class TrayController : IDisposable
     /// <summary>回滚项可用态（CalibrateCompleted/启动时）。</summary>
     public void SetRollbackEnabled(bool enabled)
     {
-        if (_miRollback is not null) _miRollback.IsEnabled = enabled;
+        if (_tray is null) return;
+        foreach (var m in new[] { _tray, _ball })
+            if (m.Rollback is not null) m.Rollback.IsEnabled = enabled;
     }
 
     public void ShowBalloon(string title, string message)

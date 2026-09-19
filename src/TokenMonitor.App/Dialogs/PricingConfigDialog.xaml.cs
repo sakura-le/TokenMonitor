@@ -75,6 +75,7 @@ public partial class PricingConfigDialog : ShellDialog
 
     public PricingConfigDialog(AppServices svc)
     {
+        InitializeComponent();
         _svc = svc;
         AddRuleCommand = new RelayCommand(AddRule);
         RemoveRuleCommand = new RelayCommand<PriceRuleVm>(r => { if (r is not null) Rules.Remove(r); });

@@ -103,7 +103,16 @@ public partial class MainWindow : Window
             Topmost = _vm?.IsTopmost ?? true;
             return;
         }
-        Show();
+        try
+        {
+            Show();
+        }
+        catch (Exception ex)
+        {
+            // 关闭竞态（退出流程中托盘双击等）：窗口已无法再显示，忽略即可
+            Core.SysUtil.Logger.Warn("Panel", "restore skipped: " + ex.Message);
+            return;
+        }
         var fade = new DoubleAnimation(0, _vm?.PanelOpacity ?? 1.0, TimeSpan.FromMilliseconds(240)) { EasingFunction = Ease() };
         var tf = new TranslateTransform { Y = 8 };
         RootBorder.RenderTransform = tf;

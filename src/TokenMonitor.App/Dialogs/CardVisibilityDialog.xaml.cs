@@ -32,6 +32,7 @@ public partial class CardVisibilityDialog : ShellDialog
 
     public CardVisibilityDialog(AppServices svc)
     {
+        InitializeComponent();
         _svc = svc;
         MoveUpCommand = new RelayCommand<CardItemVm>(MoveUp);
         MoveDownCommand = new RelayCommand<CardItemVm>(MoveDown);

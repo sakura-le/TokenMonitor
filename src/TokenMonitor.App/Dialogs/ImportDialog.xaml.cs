@@ -27,6 +27,7 @@ public partial class ImportDialog : ShellDialog
 
     public ImportDialog(AppServices svc)
     {
+        InitializeComponent();
         _svc = svc;
         var exe = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? ".";
         DirText = System.IO.Path.Combine(exe, "legacy_data");

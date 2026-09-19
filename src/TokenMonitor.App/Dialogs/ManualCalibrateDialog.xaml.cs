@@ -42,6 +42,7 @@ public partial class ManualCalibrateDialog : ShellDialog
 
     public ManualCalibrateDialog(AppServices svc)
     {
+        InitializeComponent();
         _svc = svc;
         // 模型候选：历史出现过的模型（provider/model）
         var keys = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);

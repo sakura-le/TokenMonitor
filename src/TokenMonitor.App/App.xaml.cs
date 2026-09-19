@@ -105,6 +105,7 @@ public partial class App : Application
                 ToggleAutoStart: () => Dispatcher.Invoke(ToggleAutoStart),
                 BallOpacitySelected: pct => Dispatcher.Invoke(() => SetBallOpacity(pct)),
                 ToggleBallTopmost: () => Dispatcher.Invoke(ToggleBallTopmost),
+                ToggleBallShape: () => Dispatcher.Invoke(() => AppServices.Instance.BallWindow?.ToggleShape()),
                 ImportLegacy: () => Dispatcher.Invoke(() => services.Dialogs.ShowImportLegacy()),
                 Exit: () => Dispatcher.Invoke(ExitApp)));
             tray.RefreshChecks();
@@ -231,6 +232,8 @@ public partial class App : Application
         catch (Exception ex)
         {
             Core.SysUtil.Logger.Warn("App", "autostart toggle failed: " + ex.Message);
+            AppServices.Instance.Tray?.ShowBalloon("开机自启",
+                "设置失败：" + ex.Message + "（注册表写入被拒绝，请以管理员运行一次后重试）");
         }
     }
 

@@ -29,6 +29,7 @@ public partial class FloatingBall : Window
         ballRadar.ApplyAnimationClock(RotateTransform.AngleProperty, _radarClock);
     }
     private bool _expanded;
+    private bool _preferExpanded;   // 静息形态：false=圆球（默认），true=跑马灯栏；hover 临时展开
     private bool _dragging;
     private Point _dragOffset;
     private bool _movedBeyondClick;
@@ -43,10 +44,10 @@ public partial class FloatingBall : Window
         PreviewMouseLeftButtonDown += OnMouseDown;
         PreviewMouseMove += OnMouseMove;
         PreviewMouseLeftButtonUp += OnMouseUp;
-        PreviewMouseRightButtonUp += OnRightClick;
         MouseDoubleClick += (_, _) => _svc.ShowPanel();
-        MouseEnter += (_, _) => { if (_expanded) Strip.Pause(); };
-        MouseLeave += (_, _) => Strip.Resume();
+        // hover 自动展开跑马灯、离开回落到静息形态（托盘可切换静息形态）
+        MouseEnter += (_, _) => { if (!_dragging) SetExpanded(true); if (_expanded) Strip.Pause(); };
+        MouseLeave += (_, _) => { if (!_dragging) SetExpanded(_preferExpanded); if (_expanded) Strip.Resume(); };
     }
 
     private BallViewModel Vm => _vm ??= (BallViewModel)DataContext;
@@ -55,6 +56,9 @@ public partial class FloatingBall : Window
     {
         DataContext = _vm = AppServices.Instance.Ball;
         Strip.ItemsSource = _vm!.Items;
+        // 右键菜单：绑定到窗口由 WPF 托管开合（自动处理捕获/重绘）。
+        // 不用手工 menu.IsOpen=true —— 该方式在透明分层窗口上会引发渲染停滞（球面变空白）。
+        ContextMenu = _svc.Tray?.BallMenu;
         // settings: 透明度（0-255）与置顶
         var s = _svc.Engine.Config.Settings;
         Opacity = s.BallOpacity <= 0 ? 1.0 : Math.Clamp(s.BallOpacity / 255.0, 0.2, 1.0);
@@ -146,7 +150,7 @@ public partial class FloatingBall : Window
         }
     }
 
-    /// <summary>面板收起后联动（AppServices.CollapseToBall）。</summary>
+    /// <summary>面板收起后联动（AppServices.CollapseToBall）：以静息形态出现（默认=圆球）。</summary>
     public void ExpandFromPanel()
     {
         if (!IsVisible)
@@ -160,7 +164,14 @@ public partial class FloatingBall : Window
                 Top = wa.Bottom - 160;
             }
         }
-        SetExpanded(true);
+        SetExpanded(_preferExpanded);
+    }
+
+    /// <summary>托盘「切换形态」：切换静息形态（圆球 ↔ 跑马灯栏）。</summary>
+    public void ToggleShape()
+    {
+        _preferExpanded = !_preferExpanded;
+        SetExpanded(_preferExpanded);
     }
 
     private static IEasingFunction Ease() => new CircleEase { EasingMode = EasingMode.EaseOut };
@@ -237,15 +248,5 @@ public partial class FloatingBall : Window
     }
 
     // ================= 右键 / 时钟 =================
-
-    private void OnRightClick(object sender, MouseButtonEventArgs e)
-    {
-        // 右键 = 托盘菜单（共享同一 ContextMenu 实例）
-        var menu = _svc.Tray?.Menu;
-        if (menu is null) return;
-        menu.PlacementTarget = this;
-        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
-        menu.IsOpen = true;
-        e.Handled = true;
-    }
+    // 右键菜单改由窗口 ContextMenu 托管（见 OnLoaded），不再手工弹出。
 }
