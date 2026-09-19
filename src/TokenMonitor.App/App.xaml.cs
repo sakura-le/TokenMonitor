@@ -85,11 +85,13 @@ public partial class App : Application
                 {
                     try { _engine!.SetTimezone(offset); }
                     catch (Exception ex) { Core.SysUtil.Logger.Warn("App", "tz switch failed: " + ex.Message); }
+                    AppServices.Instance.Tray?.RefreshChecks();
                 }),
                 ToggleEffectiveMode: () => Dispatcher.Invoke(() =>
                 {
                     var mode = _engine!.Config.Settings.EffectiveDateMode == "utc" ? "local" : "utc";
                     _engine.SetEffectiveDateMode(mode);
+                    AppServices.Instance.Tray?.RefreshChecks();
                 }),
                 ExportToday: () => Dispatcher.Invoke(() => RunExport("today")),
                 ExportMonth: () => Dispatcher.Invoke(() => RunExport("month")),
@@ -183,6 +185,8 @@ public partial class App : Application
             catch (Exception ex)
             {
                 Core.SysUtil.Logger.Warn("App", "tray export failed: " + ex.Message);
+                Dispatcher.BeginInvoke(() =>
+                    AppServices.Instance.Tray?.ShowBalloon("导出失败", ex.Message));
             }
         });
     }

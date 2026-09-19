@@ -78,14 +78,21 @@ public sealed class WidthToColumnsConverter : IValueConverter
         => throw new NotSupportedException();
 }
 
-/// <summary>枚举与字符串参数相等 → true（数据范围菜单勾选态）。</summary>
+/// <summary>枚举与字符串参数相等 → true（数据范围菜单勾选态）。
+/// ConvertBack：勾选时把参数名写回枚举（MenuItem.IsChecked 默认 TwoWay，
+/// 此前抛 NotSupportedException 导致范围选择静默失效）；取消勾选不动——
+/// 单选互斥由下一次勾选覆盖。</summary>
 public sealed class EnumEqualsConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         => value?.ToString()?.Equals(parameter?.ToString(), StringComparison.OrdinalIgnoreCase) == true;
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        => throw new NotSupportedException();
+    {
+        if (value is true && parameter is not null && targetType.IsEnum)
+            return Enum.Parse(targetType, parameter.ToString()!, ignoreCase: true);
+        return System.Windows.Data.Binding.DoNothing;
+    }
 }
 
 /// <summary>窗口透明度：0-255 int ↔ 0-1 double（悬浮球透明度托盘联动）。</summary>

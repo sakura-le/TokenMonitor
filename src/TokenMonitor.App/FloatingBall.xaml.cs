@@ -114,25 +114,27 @@ public partial class FloatingBall : Window
     {
         if (_expanded == expanded) return;
         _expanded = expanded;
-        var w = expanded ? 470d : 68d;
-        var h = expanded ? 56d : 68d;
         var wa = SystemParameters.WorkArea;
-        // 首次显示前的 NaN 兜底（未 Show 过的窗口 Left/Top/Width 均为 NaN）
+        // 几何铁律：高度恒定 68、以右缘为锚向左生长——保证收起矩形 ⊆ 展开矩形，
+        // 光标永远留在窗口内（此前展开态高度 56 < 收起态 68，光标在球下半部时
+        // 进入"展开→MouseLeave→收回→MouseEnter"死循环 = 球/跑马灯闪烁交替）。
+        // 窗口几何瞬时切换（不做窗口级动画）：零动画竞态、右缘零漂移；形态切换的
+        // 柔性由内部 Pill 淡入淡出承担。
+        const double h = 68d;
+        var w = expanded ? 470d : 68d;
         if (double.IsNaN(Width) || double.IsNaN(Height)) { Width = w; Height = h; }
         if (double.IsNaN(Left) || double.IsNaN(Top))
         {
-            Left = wa.Right - w - 12;
+            Left = wa.Right - 68 - 12;
             Top = wa.Bottom - 160;
         }
-        // 展开时防止超出右缘
-        var targetLeft = expanded ? Math.Min(Left, Math.Max(wa.Right - w - 8, 0)) : Left;
-
-        var animW = new DoubleAnimation(Width, w, TimeSpan.FromMilliseconds(220)) { EasingFunction = Ease() };
-        var animH = new DoubleAnimation(Height, h, TimeSpan.FromMilliseconds(220)) { EasingFunction = Ease() };
-        var animL = new DoubleAnimation(Left, targetLeft, TimeSpan.FromMilliseconds(220)) { EasingFunction = Ease() };
-        BeginAnimation(WidthProperty, animW);
-        BeginAnimation(HeightProperty, animH);
-        BeginAnimation(LeftProperty, animL);
+        var right = Left + ActualWidth;
+        if (double.IsNaN(right) || right <= 0) right = wa.Right - 12;
+        BeginAnimation(WidthProperty, null);
+        BeginAnimation(LeftProperty, null);
+        Width = w;
+        Height = h;
+        Left = Math.Max(wa.Left, right - w);
 
         if (expanded)
         {
@@ -160,7 +162,7 @@ public partial class FloatingBall : Window
             if (double.IsNaN(Left) || double.IsNaN(Top))
             {
                 var wa = SystemParameters.WorkArea;
-                Left = wa.Right - 80;
+                Left = wa.Right - 68 - 12;
                 Top = wa.Bottom - 160;
             }
         }
@@ -226,15 +228,15 @@ public partial class FloatingBall : Window
         }
     }
 
-    /// <summary>接近屏幕边缘 12px 磁吸，180ms 回弹落位。</summary>
+    /// <summary>接近屏幕边缘 12px 磁吸，180ms 回弹落位（窗口恒高 68，横向按当前宽度贴边）。</summary>
     private void SnapToEdge()
     {
         if (double.IsNaN(Left) || double.IsNaN(Top)) return;
         var wa = SystemParameters.WorkArea;
         const double magnet = 12;
+        var size = double.IsNaN(ActualWidth) || ActualWidth <= 0 ? 68 : ActualWidth;
         var targetLeft = Left;
         var targetTop = Top;
-        var size = _expanded ? ActualWidth : 68;
 
         if (Left < wa.Left + magnet) targetLeft = wa.Left + 2;
         else if (Left + size > wa.Right - magnet) targetLeft = wa.Right - size - 2;

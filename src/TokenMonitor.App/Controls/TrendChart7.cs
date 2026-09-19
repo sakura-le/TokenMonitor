@@ -20,11 +20,11 @@ public class TrendChart7 : FrameworkElement
 {
     public static readonly DependencyProperty PointsProperty = DependencyProperty.Register(
         nameof(Points), typeof(IReadOnlyList<double>), typeof(TrendChart7),
-        new PropertyMetadata(null, (d, _) => ((TrendChart7)d).InvalidateVisual()));
+        new PropertyMetadata(null, (d, e) => ((TrendChart7)d).OnSeriesChanged(e.NewValue, true)));
 
     public static readonly DependencyProperty LabelsProperty = DependencyProperty.Register(
         nameof(Labels), typeof(IReadOnlyList<string>), typeof(TrendChart7),
-        new PropertyMetadata(null, (d, _) => ((TrendChart7)d).InvalidateVisual()));
+        new PropertyMetadata(null, (d, e) => ((TrendChart7)d).OnSeriesChanged(e.NewValue, false)));
 
     /// <summary>描边宽度（1.6-2.2）。</summary>
     public static readonly DependencyProperty LineWidthProperty = DependencyProperty.Register(
@@ -91,6 +91,37 @@ public class TrendChart7 : FrameworkElement
     }
 
     private Brush Res(string key) => (Brush)FindResource(key);
+
+    private IReadOnlyList<double>? _lastPoints;
+    private IReadOnlyList<string>? _lastLabels;
+
+    /// <summary>脏检查：上游（200ms 快照路径）可能每次赋新实例但值不变——值相同跳过重绘。</summary>
+    private void OnSeriesChanged(object? newValue, bool isPoints)
+    {
+        if (isPoints)
+        {
+            var np = newValue as IReadOnlyList<double>;
+            if (SameContents(_lastPoints, np)) return;
+            _lastPoints = np;
+        }
+        else
+        {
+            var nl = newValue as IReadOnlyList<string>;
+            if (SameContents(_lastLabels, nl)) return;
+            _lastLabels = nl;
+        }
+        InvalidateVisual();
+    }
+
+    private static bool SameContents<T>(IReadOnlyList<T>? a, IReadOnlyList<T>? b)
+    {
+        if (a is null && b is null) return true;
+        if (a is null || b is null) return false;
+        if (a.Count != b.Count) return false;
+        for (var i = 0; i < a.Count; i++)
+            if (!Equals(a[i], b[i])) return false;
+        return true;
+    }
 
     protected override void OnRender(DrawingContext dc)
     {

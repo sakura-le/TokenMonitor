@@ -9,8 +9,9 @@
         TextOptions.TextFormattingMode="Display" UseLayoutRounding="True">
 
     <Grid x:Name="Root">
-        <!-- ============ 收起态 Ø68 ============ -->
+        <!-- ============ 收起态 Ø68（窗口恒高 68，球体贴右缘——展开时向左生长） ============ -->
         <Grid x:Name="BallFace" Width="68" Height="68" Visibility="Visible"
+              HorizontalAlignment="Right" VerticalAlignment="Top"
               Effect="{DynamicResource Tg.Shadow.Float}">
             <Ellipse Fill="{DynamicResource Tg.Bg.Card}"
                      Stroke="{DynamicResource Tg.Stroke.Strong}" StrokeThickness="1"/>
@@ -46,8 +47,9 @@
             </StackPanel>
         </Grid>
 
-        <!-- ============ 展开态 470×56 胶囊 ============ -->
+        <!-- ============ 展开态 470×56 胶囊（垂直居中于恒高 68 窗口） ============ -->
         <Border x:Name="Pill" Width="470" Height="56" CornerRadius="16" Visibility="Collapsed"
+                HorizontalAlignment="Right" VerticalAlignment="Center"
                 Background="{DynamicResource Tg.Bg.Panel}"
                 BorderBrush="{DynamicResource Tg.Stroke.Strong}" BorderThickness="1"
                 Effect="{DynamicResource Tg.Shadow.Float}">

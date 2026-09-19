@@ -92,9 +92,18 @@ public partial class SideDetailViewModel : ObservableObject
         BeginChartQuery(card);
     }
 
-    /// <summary>近 7 日折线查询（异步回包校验发起键 [C16]）。</summary>
+    private string _lastChartSig = "";
+    private DateTime _lastChartQueryAt = DateTime.MinValue;
+
+    /// <summary>近 7 日折线查询（异步回包校验发起键 [C16]）。
+    /// 节流：同签名 15 秒内不重查——此前挂在 200ms 快照路径上每秒 5 次清空重填集合
+    /// 并重放入场动画，造成折线图频烁。</summary>
     private void BeginChartQuery(CardViewModel card)
     {
+        var sig = $"{card.Key}|{card.IsUtc}|{card.MultiplierView}";
+        if (sig == _lastChartSig && (DateTime.UtcNow - _lastChartQueryAt).TotalSeconds < 15) return;
+        _lastChartSig = sig;
+        _lastChartQueryAt = DateTime.UtcNow;
         var gen = ++_chartGeneration;
         var scope = card.IsUtc ? BucketScope.Utc : BucketScope.Local;
         var key = $"{card.Key}|{scope}|{card.MultiplierView}|{gen}";
@@ -138,10 +147,19 @@ public partial class SideDetailViewModel : ObservableObject
         }).ContinueWith(t =>
         {
             if (t.Result.Gen != _chartGeneration || t.Result.Key0 != _pendingChartKey) return;
+            var pts = t.Result.Pts;
+            // 数据去重：与现有内容一致则不清空重填（避免无意义重绘/动画重放）
+            if (Chart.Count == pts.Count)
+            {
+                var same = true;
+                for (var i = 0; i < pts.Count; i++)
+                    if (Chart[i].Label != pts[i].Label || Math.Abs(Chart[i].Value - pts[i].Value) > 0.5) { same = false; break; }
+                if (same) return;
+            }
             Application.Current?.Dispatcher.BeginInvoke(() =>
             {
                 Chart.Clear();
-                foreach (var p in t.Result.Pts) Chart.Add(p);
+                foreach (var p in pts) Chart.Add(p);
                 ChartVersion++;
                 OnPropertyChanged(nameof(Chart));
             });

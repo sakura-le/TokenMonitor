@@ -393,6 +393,11 @@
             </Setter.Value>
         </Setter>
     </Style>
+    <!--
+    Tg.MenuItem —— 必须包含 PART_Popup + ItemsPresenter（子菜单弹出结构）。
+    此前模板缺失该结构，导致所有带子菜单的项（皮肤/统计时区/生效日期基准/导出/数据范围）点击无反应。
+    TopLevelHeader 角色向下弹出，SubmenuHeader 向右弹出；时区 53 项子菜单限高滚动。
+    -->
     <Style x:Key="Tg.MenuItem" TargetType="MenuItem">
         <Setter Property="Foreground" Value="{DynamicResource Tg.Ink.Primary}"/>
         <Setter Property="FontFamily" Value="{DynamicResource Tg.Font.Body}"/>
@@ -401,31 +406,52 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="MenuItem">
-                    <Border x:Name="bd" Background="{TemplateBinding Background}"
-                            CornerRadius="{DynamicResource Tg.Radius.Control}" Margin="2,1"
-                            Padding="10,5">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock x:Name="check" Grid.Column="0" Text="●" FontSize="8"
-                                       Visibility="Collapsed" Margin="0,0,6,1"
-                                       Foreground="{DynamicResource Tg.Accent.Brand}"
-                                       VerticalAlignment="Center"/>
-                            <ContentPresenter Grid.Column="1" ContentSource="Header"
-                                              VerticalAlignment="Center"
-                                              RecognizesAccessKey="True"/>
-                            <TextBlock x:Name="arrow" Grid.Column="2" Text="▸" Margin="14,0,0,0"
-                                       FontSize="9" VerticalAlignment="Center"
-                                       Foreground="{DynamicResource Tg.Ink.Faint}"
-                                       Visibility="Collapsed"/>
-                        </Grid>
-                    </Border>
+                    <Grid>
+                        <Border x:Name="bd" Background="{TemplateBinding Background}"
+                                CornerRadius="{DynamicResource Tg.Radius.Control}" Margin="2,1"
+                                Padding="10,5">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="check" Grid.Column="0" Text="●" FontSize="8"
+                                           Visibility="Collapsed" Margin="0,0,6,1"
+                                           Foreground="{DynamicResource Tg.Accent.Brand}"
+                                           VerticalAlignment="Center"/>
+                                <ContentPresenter Grid.Column="1" ContentSource="Header"
+                                                  VerticalAlignment="Center"
+                                                  RecognizesAccessKey="True"/>
+                                <TextBlock x:Name="arrow" Grid.Column="2" Text="▸" Margin="14,0,0,0"
+                                           FontSize="9" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource Tg.Ink.Faint}"
+                                           Visibility="Collapsed"/>
+                            </Grid>
+                        </Border>
+                        <Popup x:Name="PART_Popup"
+                               AllowsTransparency="True" Focusable="False"
+                               Placement="Right" HorizontalOffset="-2" VerticalOffset="-3"
+                               IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                               PopupAnimation="None">
+                            <Border Background="{DynamicResource Tg.Bg.Panel}"
+                                    BorderBrush="{DynamicResource Tg.Stroke.Strong}" BorderThickness="1"
+                                    CornerRadius="{DynamicResource Tg.Radius.Dialog}" Padding="5" Margin="10"
+                                    SnapsToDevicePixels="True"
+                                    Effect="{DynamicResource Tg.Shadow.Float}">
+                                <ScrollViewer MaxHeight="500" VerticalScrollBarVisibility="Auto">
+                                    <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                                </ScrollViewer>
+                            </Border>
+                        </Popup>
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="Role" Value="SubmenuHeader">
                             <Setter TargetName="arrow" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                        <Trigger Property="Role" Value="TopLevelHeader">
+                            <Setter TargetName="arrow" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="PART_Popup" Property="Placement" Value="Bottom"/>
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
                             <Setter TargetName="check" Property="Visibility" Value="Visible"/>
@@ -433,6 +459,13 @@
                         <Trigger Property="IsHighlighted" Value="True">
                             <Setter TargetName="bd" Property="Background" Value="{DynamicResource Tg.Accent.Soft}"/>
                         </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsSubmenuOpen" Value="True"/>
+                                <Condition Property="Role" Value="SubmenuHeader"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="bd" Property="Background" Value="{DynamicResource Tg.Accent.Soft}"/>
+                        </MultiTrigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Foreground" Value="{DynamicResource Tg.Ink.Faint}"/>
                         </Trigger>

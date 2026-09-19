@@ -162,7 +162,8 @@ public sealed class TrayController : IDisposable
         foreach (var key in ThemeService.SkinKeys)
         {
             var captured = key;
-            var mi = Item($"{ThemeService.DisplayName(key)}　{ThemeService.Description(key)}", () => _svc.Theme.ApplySkin(captured));
+            var mi = Item($"{ThemeService.DisplayName(key)}　{ThemeService.Description(key)}",
+                () => { _svc.Theme.ApplySkin(captured); RefreshChecks(); });
             mi.IsCheckable = true;
             r.Skins.Add((mi, key));
             skin.Items.Add(mi);
