@@ -38,7 +38,7 @@
                                         <Button Content="▼" Style="{StaticResource Tg.Btn}" Padding="4,1" Margin="3,0,0,0"
                                                 Command="{Binding DataContext.MoveDownCommand, RelativeSource={RelativeSource AncestorType=dialogs:CardVisibilityDialog}}"
                                                 CommandParameter="{Binding}"/>
-                                        <Button Content="删除" Style="{StaticResource Tg.DangerButton}" Padding="7,1" Margin="7,0,0,0"
+                                        <Button Content="{Binding DeleteLabel}" Style="{StaticResource Tg.DangerButton}" Padding="7,1" Margin="7,0,0,0"
                                                 Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=dialogs:CardVisibilityDialog}}"
                                                 CommandParameter="{Binding}"/>
                                     </StackPanel>

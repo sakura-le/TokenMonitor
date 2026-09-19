@@ -12,8 +12,23 @@ namespace TokenMonitor.App.Dialogs;
 public sealed class CardItemVm : INotifyPropertyChanged
 {
     private bool _visible;
+    private bool _armed;
     public string Key { get; init; } = "";
     public bool Visible { get => _visible; set { _visible = value; PropertyChanged?.Invoke(this, new(nameof(Visible))); } }
+
+    /// <summary>删除二次确认的行内状态：首次点击进入待确认，再次点击才真正删除。</summary>
+    public bool Armed
+    {
+        get => _armed;
+        set
+        {
+            _armed = value;
+            PropertyChanged?.Invoke(this, new(nameof(Armed)));
+            PropertyChanged?.Invoke(this, new(nameof(DeleteLabel)));
+        }
+    }
+
+    public string DeleteLabel => _armed ? "确认删除" : "删除";
     public event PropertyChangedEventHandler? PropertyChanged;
 }
 
@@ -72,10 +87,14 @@ public partial class CardVisibilityDialog : ShellDialog
     private void Delete(CardItemVm? item)
     {
         if (item is null) return;
-        // 二次确认（不可撤回；数据层自动备份）
-        var r = MessageBox.Show(this, $"确认删除模型「{item.Key}」的全部数据？\n（usage_log/usage_daily/漏抓记录一并删除，删除前自动备份）",
-            "删除模型数据", MessageBoxButton.OKCancel, MessageBoxImage.Warning);
-        if (r != MessageBoxResult.OK) return;
+        // 行内二次确认：不用 MessageBox——归 Topmost 对话框所有的 MessageBox 会藏在
+        // 对话框后面（表现为"删除按钮无效"）；首次点击进入待确认态，再点确认才删除。
+        if (!item.Armed)
+        {
+            foreach (var other in Items) other.Armed = false;
+            item.Armed = true;
+            return;
+        }
         Items.Remove(item);
         var modelKey = item.Key;
         Task.Run(() =>
