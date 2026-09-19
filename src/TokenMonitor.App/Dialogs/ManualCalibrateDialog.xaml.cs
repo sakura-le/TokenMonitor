@@ -94,7 +94,8 @@ public partial class ManualCalibrateDialog : ShellDialog
                 {
                     _svc.Tray?.ShowBalloon("手动补录", $"已补录 {capturedModel}，备份: {System.IO.Path.GetFileName(backup)}");
                     _svc.Tray?.SetRollbackEnabled(SafeState());
-                    DialogResult = true;
+                    Confirmed = true;
+                        Close();
                     Close();
                 });
             }

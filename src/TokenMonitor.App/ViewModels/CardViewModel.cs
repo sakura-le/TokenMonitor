@@ -38,6 +38,26 @@ public partial class CardViewModel : ObservableObject
             if (Enum.TryParse<CardRange>(s, out var r)) SetRange(r);
         });
         ToggleVisibilityCommand = new RelayCommand(() => _svc.Main?.SetHidden(this, !IsHidden));
+        // 卡片「设置」下拉：以本卡为作用域转发（取代原三类右键菜单）。
+        // 全部经 Dispatcher 延迟：菜单项 Click 内同步打开模态对话框会让菜单关闭流程被模态循环阻塞，
+        // 造成对话框内部控件交互异常（"点添加规则卡无反应"类问题的根因）。
+        // 菜单项点击 → 延迟到下一批 Background 操作再开模态（规范写法：
+        // 直接同步 ShowDialog 会在菜单单击处理栈内压入模态帧，实测 ShowDialog 永不返回）
+        OpenMultiplierCommand = new RelayCommand(() => Defer(() => _svc.Dialogs.ShowMultiplierConfig(Key)));
+        OpenPricingCommand = new RelayCommand(() => Defer(() => _svc.Dialogs.ShowPricingConfig(Key)));
+        OpenCalibrateCommand = new RelayCommand(() => Defer(() => _svc.Dialogs.ShowManualCalibrate(Key)));
+        OpenOpLogsCommand = new RelayCommand(() => Defer(() => _svc.Dialogs.ShowOpLogs(Key)));
+        OpenExportCommand = new RelayCommand(() => Defer(() => _svc.Dialogs.ShowExport()));
+        OpenConfigCommand = new RelayCommand(() => _svc.Main?.OpenConfigFileCommand.Execute(null));
+        OpenVisibilityCommand = new RelayCommand(() => _svc.Main?.OpenCardVisibilityCommand.Execute(null));
+        ResetTodayCommand = new RelayCommand(() => _svc.Main?.ResetTodayCommand.Execute(Key));
+    }
+
+    private static void Defer(Action action)
+    {
+        var d = System.Windows.Application.Current?.Dispatcher;
+        if (d is null) { action(); return; }
+        d.BeginInvoke(action, System.Windows.Threading.DispatcherPriority.Background);
     }
 
     public string Provider { get; }
@@ -97,6 +117,14 @@ public partial class CardViewModel : ObservableObject
     public RelayCommand RefreshCommand { get; }
     public RelayCommand<string?> SelectRangeCommand { get; }
     public RelayCommand ToggleVisibilityCommand { get; }
+    public RelayCommand OpenMultiplierCommand { get; }
+    public RelayCommand OpenPricingCommand { get; }
+    public RelayCommand OpenCalibrateCommand { get; }
+    public RelayCommand OpenOpLogsCommand { get; }
+    public RelayCommand OpenExportCommand { get; }
+    public RelayCommand OpenConfigCommand { get; }
+    public RelayCommand OpenVisibilityCommand { get; }
+    public RelayCommand ResetTodayCommand { get; }
 
     // —— 快照（Today 实时） ——
     private ModelSnapshot? _utcSnap;

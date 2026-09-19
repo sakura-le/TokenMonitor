@@ -109,7 +109,8 @@ public partial class ImportDialog : ShellDialog
                         _svc.Tray?.ShowBalloon("导入旧数据", $"导入完成：用量 {res.ImportedUsageRows} 行");
                         MessageBox.Show(this, $"导入完成：\n用量 {res.ImportedUsageRows} 行 · 漏抓 {res.ImportedMissedRows} 行 · 操作日志 {res.ImportedOpRows} 行\n备份：{res.BackupPath}",
                             "导入旧数据", MessageBoxButton.OK, MessageBoxImage.Information);
-                        DialogResult = true;
+                        Confirmed = true;
+                        Close();
                         Close();
                     }
                     else

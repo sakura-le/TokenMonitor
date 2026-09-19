@@ -894,51 +894,24 @@
                                                    FontSize="13" FontWeight="Bold"
                                                    Foreground="{DynamicResource Tg.Ink.Primary}"
                                                    VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
-                                            <!-- 模型名右键菜单（§1.5 第二层）：刷新数据 + 数据范围 -->
-                                            <TextBlock.ContextMenu>
-                                                <ContextMenu>
-                                                    <MenuItem Header="刷新数据" Style="{StaticResource Tg.MenuItem}" InputGestureText="F5"
-                                                              Command="{Binding RefreshCommand}"/>
-                                                    <Separator Style="{StaticResource Tg.MenuSeparator}"/>
-                                                    <MenuItem Header="数据范围" Style="{StaticResource Tg.MenuItem}">
-                                                        <MenuItem Header="本日" Style="{StaticResource Tg.MenuItem}" IsCheckable="True"
-                                                                  IsChecked="{Binding Range, Converter={StaticResource EnumEquals}, ConverterParameter=Today}"
-                                                                  Command="{Binding SelectRangeCommand}" CommandParameter="Today"/>
-                                                        <MenuItem Header="本周" Style="{StaticResource Tg.MenuItem}" IsCheckable="True"
-                                                                  IsChecked="{Binding Range, Converter={StaticResource EnumEquals}, ConverterParameter=Week}"
-                                                                  Command="{Binding SelectRangeCommand}" CommandParameter="Week"/>
-                                                        <MenuItem Header="近 7 日" Style="{StaticResource Tg.MenuItem}" IsCheckable="True"
-                                                                  IsChecked="{Binding Range, Converter={StaticResource EnumEquals}, ConverterParameter=Days7}"
-                                                                  Command="{Binding SelectRangeCommand}" CommandParameter="Days7"/>
-                                                        <MenuItem Header="本月" Style="{StaticResource Tg.MenuItem}" IsCheckable="True"
-                                                                  IsChecked="{Binding Range, Converter={StaticResource EnumEquals}, ConverterParameter=Month}"
-                                                                  Command="{Binding SelectRangeCommand}" CommandParameter="Month"/>
-                                                        <MenuItem Header="上月" Style="{StaticResource Tg.MenuItem}" IsCheckable="True"
-                                                                  IsChecked="{Binding Range, Converter={StaticResource EnumEquals}, ConverterParameter=LastMonth}"
-                                                                  Command="{Binding SelectRangeCommand}" CommandParameter="LastMonth"/>
-                                                        <MenuItem Header="本季度" Style="{StaticResource Tg.MenuItem}" IsCheckable="True"
-                                                                  IsChecked="{Binding Range, Converter={StaticResource EnumEquals}, ConverterParameter=Quarter}"
-                                                                  Command="{Binding SelectRangeCommand}" CommandParameter="Quarter"/>
-                                                        <MenuItem Header="本年" Style="{StaticResource Tg.MenuItem}" IsCheckable="True"
-                                                                  IsChecked="{Binding Range, Converter={StaticResource EnumEquals}, ConverterParameter=Year}"
-                                                                  Command="{Binding SelectRangeCommand}" CommandParameter="Year"/>
-                                                        <MenuItem Header="自定义日期…" Style="{StaticResource Tg.MenuItem}"
-                                                                  Command="{Binding SelectRangeCommand}" CommandParameter="Custom"/>
-                                                    </MenuItem>
-                                                </ContextMenu>
-                                            </TextBlock.ContextMenu>
                                         </TextBlock>
                                     </StackPanel>
-                                    <Border Style="{StaticResource Tg.Badge}" HorizontalAlignment="Right"
-                                            BorderThickness="1" BorderBrush="{DynamicResource Tg.State.Danger}"
-                                            Background="{DynamicResource Tg.Accent.Soft}"
-                                            Visibility="{Binding MissCount, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource PosVis}}">
-                                        <TextBlock FontSize="10" FontWeight="Bold"
-                                                   FontFamily="{DynamicResource Tg.Font.Num}"
-                                                   Foreground="{DynamicResource Tg.State.Danger}">
-                                            <Run Text="漏"/><Run Text="{Binding MissCount, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}}"/>
-                                        </TextBlock>
-                                    </Border>
+                                    <!-- 右侧：漏抓徽标 + 「设置」下拉按钮（原三类右键菜单全部收拢于此） -->
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                        <Border Style="{StaticResource Tg.Badge}" Margin="0,0,6,0"
+                                                BorderThickness="1" BorderBrush="{DynamicResource Tg.State.Danger}"
+                                                Background="{DynamicResource Tg.Accent.Soft}"
+                                                Visibility="{Binding MissCount, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource PosVis}}">
+                                            <TextBlock FontSize="10" FontWeight="Bold"
+                                                       FontFamily="{DynamicResource Tg.Font.Num}"
+                                                       Foreground="{DynamicResource Tg.State.Danger}">
+                                                <Run Text="漏"/><Run Text="{Binding MissCount, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}}"/>
+                                            </TextBlock>
+                                        </Border>
+                                        <Button x:Name="PART_Settings" Content="设置" Style="{StaticResource Tg.Btn}"
+                                                Padding="8,1" FontSize="11" VerticalAlignment="Center">
+                                        </Button>
+                                    </StackPanel>
                                 </Grid>
 
                                 <!-- Row1：请求数 | 增量 -->

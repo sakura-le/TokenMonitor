@@ -108,7 +108,8 @@ public partial class ExportDialog : ShellDialog
                         if (r == MessageBoxResult.Yes)
                             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
                                 System.IO.Path.GetDirectoryName(res.FilePath)!) { UseShellExecute = true });
-                        DialogResult = true;
+                        Confirmed = true;
+                        Close();
                         Close();
                     }
                     else

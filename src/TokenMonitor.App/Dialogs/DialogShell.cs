@@ -60,10 +60,15 @@ public class DialogShell : Window
         Background = System.Windows.Media.Brushes.Transparent;
         ResizeMode = ResizeMode.NoResize;
         ShowInTaskbar = false;
-        SizeToContent = SizeToContent.WidthAndHeight;
+        // 仅按内容定高；宽度交给各对话框的 Width/MinWidth/MaxWidth。
+        // WidthAndHeight 在无 WindowChrome 的分层窗口上会算不出尺寸 → ShowDialog 空转卡死 UI 线程。
+        SizeToContent = SizeToContent.Height;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         MinWidth = 560;
         MaxWidth = 720;
+        // 必须保留 WindowChrome：实测在 AllowsTransparency + WindowStyle=None + 无 chrome 时
+        // ShowDialog 会永久阻塞且窗口从不创建（模态帧卡死）。此前"对话框内控件点不动"的真正
+        // 原因是 OverlayWindow 遮罩泄漏（已移除），与 chrome 无关。
         WindowChrome.SetWindowChrome(this, new WindowChrome
         {
             GlassFrameThickness = new Thickness(0),
@@ -87,6 +92,10 @@ public class DialogShell : Window
     /// <summary>确认按钮默认动作（未绑 Command 的对话框调用；返回 true=关闭）。</summary>
     public Func<bool>? OnConfirm { get; set; }
 
+    /// <summary>是否经"确认"关闭。非阻塞模态（Show）下不能用 DialogResult（会抛异常），
+    /// 由调用方在 Closed 回调里读取本标记。</summary>
+    public bool Confirmed { get; set; }
+
     protected internal void DoConfirm()
     {
         if (ConfirmCommand?.CanExecute(null) == true)
@@ -95,6 +104,9 @@ public class DialogShell : Window
             return;
         }
         if (OnConfirm?.Invoke() != false)
+        {
+            Confirmed = true;
             Close();
+        }
     }
 }

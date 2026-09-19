@@ -107,7 +107,12 @@ public partial class MainViewModel : ObservableObject
         if (Math.Abs(v - value) > 0.001) PanelOpacity = v;
         Application.Current?.Dispatcher.BeginInvoke(() =>
         {
-            if (_svc.PanelWindow is not null) _svc.PanelWindow.Opacity = PanelOpacity;
+            if (_svc.PanelWindow is not null)
+            {
+                // 先释放窗口 Opacity 上的动画层（入场/收起淡入淡出若 HoldEnd 会永久锁死本地赋值）
+                _svc.PanelWindow.BeginAnimation(Window.OpacityProperty, null);
+                _svc.PanelWindow.Opacity = PanelOpacity;
+            }
             _svc.UiState.Save(this, null, _svc.PanelWindow);
         });
     }

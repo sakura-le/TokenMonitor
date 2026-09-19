@@ -1,6 +1,8 @@
 using TokenMonitor.App.Dialogs;
 using System.Windows;
 using System.Windows.Threading;
+using System.Windows.Input;
+using System.Windows.Media;
 using TokenMonitor.App.ViewModels;
 
 namespace TokenMonitor.App.Services;
@@ -21,6 +23,7 @@ public sealed class DialogService
 
     private void Show(Func<Window> create)
     {
+        Core.SysUtil.Logger.Info("Dialog", "请求打开对话框");
         Window dlg;
         try
         {
@@ -36,16 +39,14 @@ public sealed class DialogService
         ShowCore(dlg);
     }
 
-    /// <summary>模态宿主（创建之后、ShowDialog 的全部可靠性处理）。</summary>
-    private void ShowCore(Window dlg)
+    /// <summary>模态宿主：遮罩（非置顶）→ 关闭菜单/释放捕获 → ShowDialog（Owner 归属，不用 Topmost）。</summary>
+    private void ShowCore(Window dlg, Action<Window>? onClosed = null)
     {
         OverlayWindow? overlay = null;
         try
         {
-            // 菜单关闭屏障：ContextPopup 关闭/鼠标捕获释放的排队工作先走完，再进入模态循环
-            var menu = _svc.Tray?.Menu;
-            if (menu is { IsOpen: true }) menu.IsOpen = false;
-            Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.Background);
+            CloseOpenMenus();
+            try { Mouse.Capture(null); } catch { }
 
             var owner = _svc.PanelWindow;
             if (owner is { IsVisible: true })
@@ -59,9 +60,9 @@ public sealed class DialogService
             {
                 dlg.WindowStartupLocation = WindowStartupLocation.CenterScreen;
             }
-            // 面板/球/遮罩均可为 Topmost；模态对话框必须压过它们，否则"看不见的模态"卡死整程序
-            dlg.Topmost = true;
+            dlg.Topmost = owner is not { IsVisible: true };
             dlg.ShowDialog();
+            onClosed?.Invoke(dlg);
         }
         catch (Exception ex)
         {
@@ -70,7 +71,36 @@ public sealed class DialogService
         }
         finally
         {
-            overlay?.Close();
+            try { overlay?.Close(); } catch { }
+        }
+    }
+
+    /// <summary>关闭当前所有打开的弹出菜单（托盘/悬浮球/卡片设置）。</summary>
+    private static void CloseOpenMenus()
+    {
+        try
+        {
+            if (Application.Current is null) return;
+            foreach (Window w in Application.Current.Windows)
+            {
+                if (w.ContextMenu is { IsOpen: true } cm) cm.IsOpen = false;
+            }
+            // 菜单项自身所在的 ContextMenu（不在 Window 列表里）：从焦点元素回溯
+            if (Keyboard.FocusedElement is DependencyObject fe)
+            {
+                var cur = fe;
+                while (cur is not null)
+                {
+                    if (cur is System.Windows.Controls.ContextMenu cm2 && cm2.IsOpen) { cm2.IsOpen = false; break; }
+                    cur = cur is Visual or System.Windows.Media.Media3D.Visual3D
+                        ? VisualTreeHelper.GetParent(cur)
+                        : LogicalTreeHelper.GetParent(cur);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Core.SysUtil.Logger.Warn("Dialog", "CloseOpenMenus: " + ex.Message);
         }
     }
 
@@ -103,9 +133,11 @@ public sealed class DialogService
             Start = card?.CustomStart ?? DateTime.Today.AddDays(-6),
             End = card?.CustomEnd ?? DateTime.Today,
         };
-        ShowCore(dlg);
-        if (dlg.DialogResult == true && card is not null)
-            card.SetRange(CardRange.Custom, dlg.Start, dlg.End);
+        ShowCore(dlg, w =>
+        {
+            if (w is Dialogs.ShellDialog { Confirmed: true } && card is not null)
+                card.SetRange(CardRange.Custom, dlg.Start, dlg.End);
+        });
     }
 
     public void ShowCardVisibility() => Show(() => new CardVisibilityDialog(_svc));

@@ -4,8 +4,9 @@ using System.Windows.Interop;
 namespace TokenMonitor.App.Dialogs;
 
 /// <summary>
-/// 模态遮罩层（03-ui-spec §1.4）：单色半透明纯色，铺在主面板上方、对话框下方。
-/// 覆盖区域 = 主面板矩形；透明度随主面板（S1 40% 墨 / S2 88% 底 / S3 55% 墨 / S4 50% 海军，经 Tg.Mask）。
+/// 模态遮罩层（非置顶版）：铺在主面板矩形上方、对话框下方，仅作视觉分区。
+/// 关键点：Topmost=false —— 置顶遮罩会与对话框争夺 z 序并吞掉对话框内点击（历史事故）；
+/// 非置顶遮罩永远低于对话框（对话框 Owner=面板 且激活态），既保留视觉又零输入风险。
 /// </summary>
 public sealed class OverlayWindow : Window
 {
@@ -17,9 +18,10 @@ public sealed class OverlayWindow : Window
         ShowInTaskbar = false;
         ShowActivated = false;
         Focusable = false;
+        IsHitTestVisible = false;
         ResizeMode = ResizeMode.NoResize;
         SetResourceReference(BackgroundProperty, "Tg.Mask");
-        Topmost = true;
+        Topmost = false;
         Left = covered.Left;
         Top = covered.Top;
         Width = covered.ActualWidth;

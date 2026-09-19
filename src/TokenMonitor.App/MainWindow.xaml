@@ -14,25 +14,13 @@
                             CornerRadius="0" UseAeroCaptionButtons="False"/>
     </shell:WindowChrome.WindowChrome>
 
-        <Window.Resources>
-            <!-- 标题栏/面板空白处右键菜单（找回显示隐藏卡片与排序入口；
-                 WindowChrome 会把标题栏右键当非客户区吞掉，故标题栏也挂
-                 IsHitTestVisibleInChrome 的命中元素 + 面板体 RootBorder 双入口） -->
-            <ContextMenu x:Key="TitleBarMenu">
-                <MenuItem Header="显示隐藏卡片…" Style="{StaticResource Tg.MenuItem}"
-                          Command="{Binding OpenCardVisibilityCommand}"/>
-                <MenuItem Header="操作日志（全部）" Style="{StaticResource Tg.MenuItem}"
-                          Command="{Binding OpenOpLogsCommand}" CommandParameter="{x:Null}"/>
-            </ContextMenu>
-        </Window.Resources>
         <Border x:Name="RootBorder" CornerRadius="{DynamicResource Tg.Radius.Window}"
             infra:RoundClip.Enabled="True" infra:RoundClip.Radius="{DynamicResource Tg.Radius.Window}"
             Background="{DynamicResource Tg.Bg.Window}"
             BorderBrush="{DynamicResource Tg.Stroke.Strong}"
             BorderThickness="{DynamicResource Tg.Window.BorderThickness}"
             Effect="{DynamicResource Tg.Shadow.Window}"
-            ClipToBounds="False"
-            ContextMenu="{StaticResource TitleBarMenu}">
+            ClipToBounds="False">
         <Grid>
             <!-- S2 面板网格纹理 / S4 云朵 -->
             <Rectangle Fill="{DynamicResource Tg.Texture.Grid}" IsHitTestVisible="False"/>
@@ -58,17 +46,8 @@
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <Grid.ContextMenu>
-                        <ContextMenu>
-                            <MenuItem Header="显示隐藏卡片…" Style="{StaticResource Tg.MenuItem}"
-                                      Command="{Binding OpenCardVisibilityCommand}"/>
-                            <MenuItem Header="操作日志（全部）" Style="{StaticResource Tg.MenuItem}"
-                                      Command="{Binding OpenOpLogsCommand}" CommandParameter="{x:Null}"/>
-                        </ContextMenu>
-                    </Grid.ContextMenu>
 
-                    <StackPanel Orientation="Horizontal" Margin="14,0,0,0" VerticalAlignment="Center"
-                                shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                    <StackPanel Orientation="Horizontal" Margin="14,0,0,0" VerticalAlignment="Center">
                         <Border Width="20" Height="20" CornerRadius="{DynamicResource Tg.Radius.Control}"
                                 Background="{DynamicResource Tg.Accent.Brand}">
                             <Grid>
@@ -161,26 +140,6 @@
                                             SetMulViewCommand="{Binding SetMulViewCommand}"/>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
-                                <ItemsControl.ContextMenu>
-                                    <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                                        <MenuItem Header="倍率配置…" Style="{StaticResource Tg.MenuItem}"
-                                                  Command="{Binding OpenMultiplierCommand}" CommandParameter="{Binding SelectedCard.Key}"/>
-                                        <MenuItem Header="计价配置…" Style="{StaticResource Tg.MenuItem}"
-                                                  Command="{Binding OpenPricingCommand}" CommandParameter="{Binding SelectedCard.Key}"/>
-                                        <Separator Style="{StaticResource Tg.MenuSeparator}"/>
-                                        <MenuItem Header="手动补录…" Style="{StaticResource Tg.MenuItem}"
-                                                  Command="{Binding OpenCalibrateCommand}" CommandParameter="{Binding SelectedCard.Key}"/>
-                                        <MenuItem Header="操作日志" Style="{StaticResource Tg.MenuItem}"
-                                                  Command="{Binding OpenOpLogsCommand}" CommandParameter="{Binding SelectedCard.Key}"/>
-                                        <MenuItem Header="导出数据" Style="{StaticResource Tg.MenuItem}"
-                                                  Command="{Binding OpenExportCommand}"/>
-                                        <MenuItem Header="打开配置文件" Style="{StaticResource Tg.MenuItem}"
-                                                  Command="{Binding OpenConfigFileCommand}"/>
-                                        <Separator Style="{StaticResource Tg.MenuSeparator}"/>
-                                        <MenuItem Header="重置今日…" Style="{StaticResource Tg.MenuItemDanger}"
-                                                  Command="{Binding ResetTodayCommand}" CommandParameter="{Binding SelectedCard.Key}"/>
-                                    </ContextMenu>
-                                </ItemsControl.ContextMenu>
                             </ItemsControl>
                         </ScrollViewer>
                     </Border>

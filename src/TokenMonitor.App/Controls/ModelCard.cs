@@ -13,6 +13,84 @@ namespace TokenMonitor.App.Controls;
 /// </summary>
 public class ModelCard : Control
 {
+    private bool _settingsWired;
+
+    /// <summary>
+    /// 右上角「设置」下拉：菜单在代码中构建并直调 CardViewModel 命令。
+    /// 不用 XAML 模板内 ContextMenu + Command 绑定——模板内 DataContext 传递在
+    /// 实际运行中失配，导致菜单项命令为 null（点击无反应）；每次打开重建菜单，
+    /// 顺带保证"数据范围"勾选态与当前卡片一致。
+    /// </summary>
+    private void OpenSettingsMenu(System.Windows.Controls.Button btn)
+    {
+        if (DataContext is not ViewModels.CardViewModel card) return;
+        var cm = new System.Windows.Controls.ContextMenu();
+
+        System.Windows.Controls.MenuItem Item(string header, Action act, bool danger = false)
+        {
+            var mi = new System.Windows.Controls.MenuItem { Header = header };
+            mi.SetResourceReference(FrameworkElement.StyleProperty, danger ? "Tg.MenuItemDanger" : "Tg.MenuItem");
+            mi.Click += (_, _) => act();
+            return mi;
+        }
+        System.Windows.Controls.MenuItem RangeItem(string header, ViewModels.CardRange range, string param)
+        {
+            var mi = Item(header, () => card.SelectRangeCommand.Execute(param));
+            mi.IsCheckable = true;
+            mi.IsChecked = card.Range == range;
+            return mi;
+        }
+        System.Windows.Controls.Separator Sep() => new()
+        {
+            Style = (Style)Application.Current.FindResource("Tg.MenuSeparator")
+        };
+
+        cm.Items.Add(Item("刷新数据", () => card.RefreshCommand.Execute(null)));
+        var range = new System.Windows.Controls.MenuItem { Header = "数据范围" };
+        range.SetResourceReference(FrameworkElement.StyleProperty, "Tg.MenuItem");
+        range.Items.Add(RangeItem("本日", ViewModels.CardRange.Today, "Today"));
+        range.Items.Add(RangeItem("本周", ViewModels.CardRange.Week, "Week"));
+        range.Items.Add(RangeItem("近 7 日", ViewModels.CardRange.Days7, "Days7"));
+        range.Items.Add(RangeItem("本月", ViewModels.CardRange.Month, "Month"));
+        range.Items.Add(RangeItem("上月", ViewModels.CardRange.LastMonth, "LastMonth"));
+        range.Items.Add(RangeItem("本季度", ViewModels.CardRange.Quarter, "Quarter"));
+        range.Items.Add(RangeItem("本年", ViewModels.CardRange.Year, "Year"));
+        range.Items.Add(Item("自定义日期…", () => card.SelectRangeCommand.Execute("Custom")));
+        cm.Items.Add(range);
+        cm.Items.Add(Sep());
+        cm.Items.Add(Item("倍率配置…", () => card.OpenMultiplierCommand.Execute(null)));
+        cm.Items.Add(Item("计价配置…", () => card.OpenPricingCommand.Execute(null)));
+        cm.Items.Add(Item("手动补录…", () => card.OpenCalibrateCommand.Execute(null)));
+        cm.Items.Add(Item("操作日志", () => card.OpenOpLogsCommand.Execute(null)));
+        cm.Items.Add(Item("导出数据", () => card.OpenExportCommand.Execute(null)));
+        cm.Items.Add(Item("打开配置文件", () => card.OpenConfigCommand.Execute(null)));
+        cm.Items.Add(Sep());
+        cm.Items.Add(Item("显示隐藏卡片…", () => card.OpenVisibilityCommand.Execute(null)));
+        cm.Items.Add(Sep());
+        cm.Items.Add(Item("重置今日…", () => card.ResetTodayCommand.Execute(null), danger: true));
+
+        cm.DataContext = card;
+        cm.PlacementTarget = btn;
+        cm.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+        cm.IsOpen = true;
+    }
+
+    public override void OnApplyTemplate()
+    {
+        base.OnApplyTemplate();
+        if (_settingsWired) return;
+        if (GetTemplateChild("PART_Settings") is System.Windows.Controls.Button btn)
+        {
+            _settingsWired = true;
+            btn.AddHandler(UIElement.PreviewMouseLeftButtonUpEvent,
+                new System.Windows.Input.MouseButtonEventHandler((_, e) =>
+                {
+                    e.Handled = true;
+                    OpenSettingsMenu(btn);
+                }), true);
+        }
+    }
+
     public static readonly DependencyProperty ProviderTextProperty = DependencyProperty.Register(
         nameof(ProviderText), typeof(string), typeof(ModelCard), new PropertyMetadata(""));
 

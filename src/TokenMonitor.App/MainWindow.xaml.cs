@@ -86,11 +86,11 @@ public partial class MainWindow : Window
     public void CollapseToBall()
     {
         if (!IsVisible) return;
-        var fade = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(240)) { EasingFunction = Ease() };
+        var fade = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(240)) { EasingFunction = Ease(), FillBehavior = FillBehavior.Stop };
         var move = new DoubleAnimation(0, 8, TimeSpan.FromMilliseconds(240)) { EasingFunction = Ease() };
         var tf = new TranslateTransform();
         RootBorder.RenderTransform = tf;
-        fade.Completed += (_, _) => { Hide(); tf.BeginAnimation(TranslateTransform.YProperty, null); };
+        fade.Completed += (_, _) => { BeginAnimation(OpacityProperty, null); Opacity = _vm?.PanelOpacity ?? 1.0; Hide(); tf.BeginAnimation(TranslateTransform.YProperty, null); };
         tf.BeginAnimation(TranslateTransform.YProperty, move);
         BeginAnimation(OpacityProperty, fade);
     }
@@ -113,12 +113,13 @@ public partial class MainWindow : Window
             Core.SysUtil.Logger.Warn("Panel", "restore skipped: " + ex.Message);
             return;
         }
-        var fade = new DoubleAnimation(0, _vm?.PanelOpacity ?? 1.0, TimeSpan.FromMilliseconds(240)) { EasingFunction = Ease() };
+        var fade = new DoubleAnimation(0, _vm?.PanelOpacity ?? 1.0, TimeSpan.FromMilliseconds(240)) { EasingFunction = Ease(), FillBehavior = FillBehavior.Stop };
         var tf = new TranslateTransform { Y = 8 };
         RootBorder.RenderTransform = tf;
         var move = new DoubleAnimation(8, 0, TimeSpan.FromMilliseconds(240)) { EasingFunction = Ease() };
         move.Completed += (_, _) => RootBorder.RenderTransform = Transform.Identity;
         tf.BeginAnimation(TranslateTransform.YProperty, move);
+        fade.Completed += (_, _) => BeginAnimation(OpacityProperty, null);
         BeginAnimation(OpacityProperty, fade);
         Activate();
     }
