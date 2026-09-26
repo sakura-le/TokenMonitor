@@ -189,8 +189,17 @@ public partial class FloatingBall : Window
     private Point _origScreenDip;
     private double _origLeft, _origTop;
 
+    /// <summary>§4：按住拖拽时盘内元素（命中弧/雷达/数字）的放大系数；底盘不缩放。</summary>
+    private const double PressScale = 1.06;
+    /// <summary>命中弧常态/按住描边宽度。</summary>
+    private const double ArcThicknessIdle = 4, ArcThicknessPressed = 5.5;
+
     private void OnMouseDown(object sender, MouseButtonEventArgs e)
     {
+        // 磁吸回弹用 BeginAnimation 落位，动画层以 HoldEnd 常驻：动画值优先级高于本地值，
+        // 之后的 Left/Top 赋值全部被覆盖 → 表现为"每个进程只能拖动一次"（第一次吸附后再也拖不动）。
+        // 先把当前显示值固化为本地值，再清空动画层。
+        FreezePosition();
         _dragging = true;
         _movedBeyondClick = false;
         _dragOffset = e.GetPosition(this);
@@ -200,11 +209,30 @@ public partial class FloatingBall : Window
         var dpi = VisualTreeHelper.GetDpi(this);
         _origScreenDip = new Point(sp.X / dpi.DpiScaleX, sp.Y / dpi.DpiScaleY);
         CaptureMouse();
-        // 拖拽中：scale 1.06（§4）
-        var st = BallFace.RenderTransform as ScaleTransform ?? new ScaleTransform();
-        st.ScaleX = st.ScaleY = 1.06;
-        BallFace.RenderTransformOrigin = new Point(0.5, 0.5);
-        BallFace.RenderTransform = st;
+        SetPressFeedback(true);
+    }
+
+    /// <summary>
+    /// 按压反馈：只放大盘内元素并加粗命中弧，**不动底盘**。
+    /// 底盘 Ø68 正好铺满 68px 窗口，整盘放大 1.06 会画到窗口外，被窗口裁掉一圈边
+    /// （用户反馈"按住时圆被切掉一部分边线"）；放大窗口又会踩 WPF 的 Left/Top 与尺寸
+    /// 同帧应用的坑（实测位置偏移被丢弃）。内圈最大半径 32 × 1.06 = 33.9 &lt; 34 → 放大后仍在盘内。
+    /// </summary>
+    private void SetPressFeedback(bool pressed)
+    {
+        BallInnerScale.ScaleX = BallInnerScale.ScaleY = pressed ? PressScale : 1.0;
+        HitArc.StrokeThickness = pressed ? ArcThicknessPressed : ArcThicknessIdle;
+    }
+
+    /// <summary>把 Left/Top 的当前显示值写成本地值（清掉吸附/展开动画的动画层）。</summary>
+    private void FreezePosition()
+    {
+        var l = Left;
+        var t = Top;
+        BeginAnimation(LeftProperty, null);
+        BeginAnimation(TopProperty, null);
+        if (!double.IsNaN(l)) Left = l;
+        if (!double.IsNaN(t)) Top = t;
     }
 
     private void OnMouseMove(object sender, MouseEventArgs e)
@@ -225,8 +253,7 @@ public partial class FloatingBall : Window
         if (!_dragging) return;
         _dragging = false;
         ReleaseMouseCapture();
-        var st = BallFace.RenderTransform as ScaleTransform;
-        if (st is not null) { st.ScaleX = st.ScaleY = 1.0; }
+        SetPressFeedback(false);
         if (_movedBeyondClick)
         {
             _clickTimer?.Stop();

@@ -167,22 +167,27 @@ public sealed class PricingEngine : IPricingEngine
 
     // —— 委托出口（RateFunc/CostFunc 落点；hour/offset 由调用方显式传入）——
 
-    /// <summary>RateFunc 委托出口：聚合器已按其口径算好分数小时（offsetMin=0 → UTC 口径匹配 UTC 表）。</summary>
+    /// <summary>
+    /// RateFunc 委托出口：聚合器已按其口径算好分数小时（offsetMin=0 → UTC 口径匹配 UTC 表）。
+    /// 版本生效日期只由 mode 决定，故取引擎自身 offset——调用方的 offsetMin 只决定时段表/星期口径。
+    /// 否则 RecalcDerived（传 0 表示 UTC 口径）会让 mode=local 退回 UTC 日历选版本，
+    /// 与实时路径（Accumulator 传真实 offset）选到不同版本 → [C1] 幂等前提被破坏。
+    /// </summary>
     public double QuoteRate(string modelKey, long ts, double hour, int offsetMin)
     {
-        var (mode, _) = EffectiveContext;
-        var date = EffectiveDate(ts, mode, offsetMin);
+        var (mode, ownOffset) = EffectiveContext;
+        var date = EffectiveDate(ts, mode, ownOffset);
         return offsetMin == 0
             ? QuoteRateCore(modelKey, date, hour, BucketScope.Utc, 0).Rate
             : QuoteRateCore(modelKey, date, hour, BucketScope.Local, offsetMin).Rate;
     }
 
-    /// <summary>CostFunc 委托出口（同上；星期按 ts 与口径日历推导）。</summary>
+    /// <summary>CostFunc 委托出口（同上；星期按 ts 与口径日历推导；生效日期同 QuoteRate 取引擎自身 offset）。</summary>
     public (double Cny, double Usd) QuoteCost(string modelKey, long ts, double hour, int offsetMin,
                                               long cacheHit, long cacheMiss, long completion)
     {
-        var (mode, _) = EffectiveContext;
-        var date = EffectiveDate(ts, mode, offsetMin);
+        var (mode, ownOffset) = EffectiveContext;
+        var date = EffectiveDate(ts, mode, ownOffset);
         var q = offsetMin == 0
             ? QuoteCostCore(modelKey, date, ts, hour, BucketScope.Utc, 0, cacheHit, cacheMiss, completion)
             : QuoteCostCore(modelKey, date, ts, hour, BucketScope.Local, offsetMin, cacheHit, cacheMiss, completion);

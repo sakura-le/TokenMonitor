@@ -95,12 +95,12 @@ public sealed class DialogService
         }
     }
 
-    private string? InitialModel(string? modelKey)
-    {
-        if (string.IsNullOrEmpty(modelKey)) return null;
-        var i = modelKey.IndexOf('/');
-        return i < 0 ? modelKey : modelKey[(i + 1)..];   // pricing.json 键 = 不带 provider 前缀
-    }
+    /// <summary>
+    /// 配置对话框的预选模型键：pricing.json / 卡片都用完整键 "provider/model"（见 PricingDocument 注释），
+    /// 此处必须原样透传——此前剥掉 provider 前缀会让保存写到 "deepseek-flash" 这类不存在的键上，
+    /// 卡片按 "DeepSeek/deepseek-flash" 取值 → 表现为"保存了但不生效"。
+    /// </summary>
+    private static string? InitialModel(string? modelKey) => string.IsNullOrEmpty(modelKey) ? null : modelKey;
 
     public void ShowMultiplierConfig(string? modelKey = null) =>
         Show(() => new MultiplierConfigDialog(_svc) { ChosenModel = InitialModel(modelKey) ?? "" });
@@ -134,4 +134,7 @@ public sealed class DialogService
     public void ShowCardVisibility() => Show(() => new CardVisibilityDialog(_svc));
 
     public void ShowImportLegacy() => Show(() => new ImportDialog(_svc));
+
+    /// <summary>设置窗口（代理/供应商/生效基准/时区/悬浮球/自启；替代直接编辑 config.json）。</summary>
+    public void ShowSettings() => Show(() => new SettingsDialog(_svc));
 }

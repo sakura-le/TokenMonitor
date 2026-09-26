@@ -5,7 +5,7 @@ namespace TokenMonitor.App.Controls;
 
 /// <summary>
 /// C-09 DualClock —— UTC 与 LOCAL 双钟（03-ui-spec §1.3 / 样例 clocks 区）。
-/// 每秒走字由 ViewModel 驱动（只改文本，不动结构）；S2 闪烁光标由模板触发。
+/// 每秒走字由 ViewModel 驱动（只改文本，不动结构）。
 /// </summary>
 public class DualClockControl : Control
 {

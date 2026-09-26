@@ -9,11 +9,11 @@
         ConfirmText="补录并生效" Width="540">
     <dialogs:ShellDialog.Content>
         <StackPanel>
-            <Grid Margin="0,0,0,11">
+            <StackPanel Margin="0,0,0,11">
                 <TextBlock Text="模型 MODEL" Style="{StaticResource Tg.MicroLabel}" Margin="0,0,0,5"/>
                 <ComboBox Style="{StaticResource Tg.Combo}" ItemsSource="{Binding ModelKeys}"
-                          SelectedItem="{Binding ChosenModel}" Margin="0,17,0,0"/>
-            </Grid>
+                          SelectedItem="{Binding ChosenModel}"/>
+            </StackPanel>
             <Grid Margin="0,0,0,11">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>

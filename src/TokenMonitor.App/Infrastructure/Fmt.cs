@@ -60,6 +60,23 @@ public static class Fmt
         return $"{hh:00}:{mm:00}";
     }
 
+    /// <summary>时段起点候选项：00:00…23:30，每半小时一档（配置对话框下拉）。</summary>
+    public static IReadOnlyList<string> HourStarts { get; } = BuildHourOptions(0, 47);
+
+    /// <summary>时段终点候选项：00:30…24:00，每半小时一档（终点点允许 24:00）。</summary>
+    public static IReadOnlyList<string> HourEnds { get; } = BuildHourOptions(1, 48);
+
+    private static List<string> BuildHourOptions(int fromStep, int toStep)
+    {
+        var list = new List<string>(toStep - fromStep + 1);
+        for (var step = fromStep; step <= toStep; step++) list.Add(HourLabel(step / 2.0));
+        return list;
+    }
+
+    /// <summary>把任意 HH:mm 文本归一到 0.5h 档位标签（"9:00" → "09:00"、"09:15" → "09:30"）。</summary>
+    public static string NormalizeHour(string? text, double fallback = 0)
+        => HourLabel(ParseHour(text) ?? fallback);
+
     /// <summary>解析 HH:mm 为 0.5h 粒度小时数；非法返回 null。</summary>
     public static double? ParseHour(string? text)
     {

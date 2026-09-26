@@ -1,6 +1,7 @@
 using System.Threading;
 using System.Windows;
 using System.Windows.Threading;
+using TokenMonitor.App.Infrastructure;
 using TokenMonitor.App.Services;
 
 namespace TokenMonitor.App;
@@ -78,6 +79,7 @@ public partial class App : Application
             services.Tray = tray;
             tray.Initialize(new Tray.TrayMenuCallbacks(
                 OpenPanel: () => Dispatcher.Invoke(services.ShowPanel),
+                OpenSettings: () => Dispatcher.Invoke(services.Dialogs.ShowSettings),
                 OpenConfigFile: () => Dispatcher.Invoke(() => services.Main!.OpenConfigFileCommand.Execute(null)),
                 MultiplierConfig: () => Dispatcher.Invoke(() => services.Dialogs.ShowMultiplierConfig()),
                 PricingConfig: () => Dispatcher.Invoke(() => services.Dialogs.ShowPricingConfig()),
@@ -222,29 +224,8 @@ public partial class App : Application
 
     private void ToggleAutoStart()
     {
-        try
-        {
-            var enable = !IsAutoStartOn();
-            using var key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(
-                @"Software\Microsoft\Windows\CurrentVersion\Run");
-            if (enable)
-                key.SetValue("TokenMonitor", $"\"{Environment.ProcessPath}\"");
-            else
-                key.DeleteValue("TokenMonitor", false);
-            AppServices.Instance.Tray?.RefreshChecks();
-        }
-        catch (Exception ex)
-        {
-            Core.SysUtil.Logger.Warn("App", "autostart toggle failed: " + ex.Message);
-            AppServices.Instance.Tray?.ShowBalloon("开机自启",
-                "设置失败：" + ex.Message + "（注册表写入被拒绝，请以管理员运行一次后重试）");
-        }
-    }
-
-    private static bool IsAutoStartOn()
-    {
-        using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run");
-        return key?.GetValue("TokenMonitor") is not null;
+        // 注册表读写收敛到 AutoStart 助手（设置窗口共用；失败时助手已弹气泡提示）
+        if (AutoStart.Apply(!AutoStart.IsEnabled())) AppServices.Instance.Tray?.RefreshChecks();
     }
 
     private void SetBallOpacity(int pct)
@@ -268,17 +249,65 @@ public partial class App : Application
 
     private void ExitApp()
     {
+        if (_stopped) return;
         _stopped = true;
-        Shutdown(0);
+        var services = AppServices.Instance;
+        // 1. UI 状态立即落盘（引擎停止最长 10s，期间不能让面板矩形/隐藏卡等改动丢失）
+        try { services?.SaveUiNow(); }
+        catch (Exception ex) { Core.SysUtil.Logger.Warn("App", "退出保存 ui_state 失败: " + ex.Message); }
+        // 2. 托盘图标即刻撤除：点击"退出"马上有反馈
+        try { services?.Tray?.Dispose(); }
+        catch (Exception ex) { Core.SysUtil.Logger.Warn("App", "退出释放托盘失败: " + ex.Message); }
+
+        // 3. 引擎停止放到后台线程（见 StopEngineAsync 注释），完成后回 UI 线程关闭应用。
+        //    绝不能在 UI 线程上同步等——那正是"托盘退出进程不死"的根因。
+        StopEngineAsync().ContinueWith(_ =>
+        {
+            try { Dispatcher.BeginInvoke(new Action(() => Shutdown(0))); }
+            catch (Exception ex) { Core.SysUtil.Logger.Warn("App", "退出时 Shutdown 派发失败: " + ex.Message); }
+        }, TaskScheduler.Default);
+        // 4. §7.2 步骤 7 兜底：任何一步被第三方残留句柄/阻塞步骤卡住时，超时后强制结束进程，
+        //    杜绝"点了退出、进程只能任务管理器结束"复发（正常路径 1s 内已自然退出，此计时随进程一起消失）。
+        ArmForceExit(TimeSpan.FromSeconds(20));
     }
 
-    protected override async void OnExit(ExitEventArgs e)
+    /// <summary>退出兜底计时：到期仍存活 → 记日志后强制结束进程。</summary>
+    private static void ArmForceExit(TimeSpan budget)
+    {
+        Task.Delay(budget).ContinueWith(_ =>
+        {
+            Core.SysUtil.Logger.Warn("App", $"退出流程超过 {budget.TotalSeconds:0}s 未结束 → 强制结束进程");
+            Environment.Exit(0);
+        }, TaskScheduler.Default);
+    }
+
+    private Task? _engineStopTask;
+
+    /// <summary>
+    /// 停止引擎（§7.2：保存 ui_state → 停代理/Flush/Checkpoint）。
+    /// 必须在无 SynchronizationContext 的线程上执行：Proxy.Stop → WebApplication.StopAsync
+    /// 的同步等待在 UI 线程会与 WPF 派发队列互锁（实测日志停在「代理停止中」、进程只能任务管理器结束）。
+    /// </summary>
+    private Task StopEngineAsync()
+    {
+        if (_engine is null) return Task.CompletedTask;
+        if (_engineStopTask is not null) return _engineStopTask;
+        var engine = _engine;
+        return _engineStopTask = Task.Run(() =>
+        {
+            try { engine.StopAsync().GetAwaiter().GetResult(); }
+            catch (Exception ex) { Core.SysUtil.Logger.Error("App", "引擎停止异常", ex); }
+        });
+    }
+
+    protected override void OnExit(ExitEventArgs e)
     {
         try
         {
-            // §7.2：保存 ui_state（强制落盘）→ 引擎 StopAsync（停代理/Flush/Checkpoint）→ 托盘 Dispose
             AppServices.Instance?.SaveUiNow();
-            if (_engine is not null) await _engine.StopAsync();
+            // 非 ExitApp 路径（启动失败等）兜底：等引擎停止完成，保证 Flush/Checkpoint 落盘
+            try { StopEngineAsync().Wait(TimeSpan.FromSeconds(15)); }
+            catch (Exception ex) { Core.SysUtil.Logger.Warn("App", "退出等待引擎停止超时: " + ex.Message); }
             AppServices.Instance?.Tray?.Dispose();
             _singleInstanceMutex?.ReleaseMutex();
             _singleInstanceMutex?.Dispose();

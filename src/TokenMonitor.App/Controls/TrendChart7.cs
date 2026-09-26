@@ -11,7 +11,8 @@ namespace TokenMonitor.App.Controls;
 /// <summary>
 /// C-07 TrendChart7 —— 近 7 日总 Token 折线（03-ui-spec §3.3）。
 /// StreamGeometry（PenLineCap/Join=Round，Stroke≈1.6-2.2）+ 3 条弱网格线 +
-/// 7 个透明热点 → 命中弹 Popup（「MM-DD · N.NM」，跟随钳位）；
+/// hover 焦点：**只需鼠标进入图表**，按横坐标取最近的一天（不必移到点上）→
+/// 竖导引线 + 焦点圆点 + 跟随弹层（「MM-DD · N.NM」，跟随钳位）；
 /// 入场：Reveal 0→1（Power3 出 650ms）按比例揭示；
 /// 终点标记（S3/S4）在完成后弹现。
 /// 颜色全部 FindResource 现取（§3.2 坑 3：禁止缓存 Brush），皮肤切换 → InvalidateVisual。
@@ -110,6 +111,9 @@ public class TrendChart7 : FrameworkElement
             if (SameContents(_lastLabels, nl)) return;
             _lastLabels = nl;
         }
+        // 数据换了 → 旧焦点索引失效（7 日本来就可能整体右移一天）
+        _hotIndex = -1;
+        _popup.IsOpen = false;
         InvalidateVisual();
     }
 
@@ -128,6 +132,11 @@ public class TrendChart7 : FrameworkElement
         var w = ActualWidth;
         var h = ActualHeight;
         if (w <= 0 || h <= 0) return;
+
+        // 透明命中层：自绘 FrameworkElement 只对"画出来的几何"命中测试，
+        // 空白区收不到鼠标事件 → 此前 hover 必须正好压在折线/网格线上才有反应。
+        // 先铺一层 Transparent 填充（不可见但可命中），hover 判定才覆盖整块图表。
+        dc.DrawRectangle(Brushes.Transparent, null, new Rect(0, 0, w, h));
 
         var grid = Res("Tg.Chart.Grid");
         var lineBrush = Res("Tg.Chart.Line");
@@ -186,30 +195,37 @@ public class TrendChart7 : FrameworkElement
             dc.DrawEllipse(dotBrush, null, new Point(_xs[count - 1], _ys[count - 1]), r, r);
             dc.Pop();
         }
+
+        // hover 焦点：竖导引线 + 实心圆点（鼠标一进图表就有，无需点击）
+        if (_hotIndex >= 0 && _hotIndex < _xs.Count)
+        {
+            var hx = _xs[_hotIndex];
+            var hy = _ys[_hotIndex];
+            var guide = new Pen(grid, 1) { DashStyle = new DashStyle(new double[] { 2, 2 }, 0) };
+            guide.Freeze();
+            dc.DrawLine(guide, new Point(hx, top), new Point(hx, bottom));
+            dc.DrawEllipse(Res("Tg.Accent.Brand"), new Pen(Res("Tg.Bg.Panel"), 1.5), new Point(hx, hy), 3.4, 3.4);
+        }
     }
 
     protected override void OnMouseMove(MouseEventArgs e)
     {
         base.OnMouseMove(e);
         var pts = Points;
-        if (pts is null || pts.Count == 0) return;
-        var p = e.GetPosition(this);
-        var best = -1;
-        var bestD = 14.0;
+        if (pts is null || pts.Count == 0 || _xs.Count == 0) { ClosePopup(); return; }
+        // 只按横坐标取最近的一天：判定范围 = 整块图表，光标不必移到点上
+        var x = e.GetPosition(this).X;
+        var best = 0;
+        var bestD = double.MaxValue;
         for (var i = 0; i < _xs.Count; i++)
         {
-            var dx = Math.Abs(_xs[i] - p.X);
-            var dy = Math.Abs(_ys[i] - p.Y);
-            var d = Math.Max(dx, dy * 1.5);
+            var d = Math.Abs(_xs[i] - x);
             if (d < bestD) { bestD = d; best = i; }
         }
-        if (best == _hotIndex) return;
+        if (best == _hotIndex && _popup.IsOpen) return;
         _hotIndex = best;
-        if (best < 0)
-        {
-            _popup.IsOpen = false;
-            return;
-        }
+        InvalidateVisual();                    // 焦点标记随 hover 移动
+
         var label = Labels is not null && best < Labels.Count ? Labels[best] : "";
         var v = pts[best];
         var vs = v >= 1_000_000
@@ -226,7 +242,14 @@ public class TrendChart7 : FrameworkElement
     protected override void OnMouseLeave(MouseEventArgs e)
     {
         base.OnMouseLeave(e);
-        _hotIndex = -1;
+        ClosePopup();
+    }
+
+    private void ClosePopup()
+    {
         _popup.IsOpen = false;
+        if (_hotIndex < 0) return;
+        _hotIndex = -1;
+        InvalidateVisual();
     }
 }

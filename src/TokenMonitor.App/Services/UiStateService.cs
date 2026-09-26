@@ -35,8 +35,15 @@ public sealed class UiStateService
             var ui = _config.Ui;
             var order = main?.Cards.Select(c => c.Key).ToList()
                         ?? ui?.CardOrder?.ToList() ?? new List<string>();
-            var hidden = main?.Cards.Where(c => c.IsHidden).Select(c => c.Key).ToHashSet()
-                         ?? ui?.HiddenCards?.ToHashSet() ?? new HashSet<string>();
+            // 隐藏集：以已落盘集合为底，按当前卡片状态增删。
+            // 不能只用 Cards 重建——快照里暂时没有的模型（今日清零/当日无数据）会把它的隐藏意图抹掉。
+            var hidden = ui?.HiddenCards?.ToHashSet() ?? new HashSet<string>();
+            if (main is not null)
+                foreach (var c in main.Cards)
+                {
+                    if (c.IsHidden) hidden.Add(c.Key);
+                    else hidden.Remove(c.Key);
+                }
             var scope = main?.Cards.ToDictionary(c => c.Key, c => c.IsUtc ? "utc" : "local")
                         ?? ui?.CardScope?.ToDictionary(kv => kv.Key, kv => kv.Value) ?? new Dictionary<string, string>();
             var mulView = main?.Cards.ToDictionary(c => c.Key, c => c.MultiplierView)
@@ -73,18 +80,15 @@ public sealed class UiStateService
     /// <summary>强制落盘（防抖队列清空由 Core 退出序列处理；此处再保存一次确保最新）。</summary>
     public void Flush(MainViewModel? main, FloatingBall? ball, MainWindow? panel) => Save(main, ball, panel);
 
-    /// <summary>还原面板窗口矩形（越界回调到主屏工作区，03-ui-spec §3.2-7）。</summary>
+    /// <summary>还原面板窗口位置（越界回调到主屏工作区，03-ui-spec §3.2-7）。
+    /// 尺寸不还原：面板固定为 XAML 基准 760×560（ResizeMode=NoResize），
+    /// 旧 ui_state 里被拖出的尺寸（单列版式下会拉伸变形）在此被忽略并随下次保存自我修正。</summary>
     public void RestorePanel(MainWindow win)
     {
         var p = _config.Ui?.Panel;
         var wa = SystemParameters.WorkArea;
         if (p is not null)
         {
-            if (p.Width is > 200 && p.Height is > 200)
-            {
-                win.Width = Math.Clamp(p.Width.Value, 720, Math.Max(760, wa.Width));
-                win.Height = Math.Clamp(p.Height.Value, 520, Math.Max(560, wa.Height));
-            }
             win.Left = p.Left ?? (wa.Width - win.Width) / 2;
             win.Top = p.Top ?? (wa.Height - win.Height) / 2;
             var op = Math.Clamp(p.Opacity <= 0 ? 1.0 : p.Opacity, 0.3, 1.0);

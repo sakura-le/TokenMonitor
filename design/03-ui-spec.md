@@ -13,7 +13,7 @@
 
 | 表面 | 窗体 | 尺寸 | 刷新 |
 |---|---|---|---|
-| ① 主面板 | 无边框置顶小部件 `MainWindow` | 基准 760×560（可记忆缩放，最小 720×520） | StatsSnapshot 200ms |
+| ① 主面板 | 无边框置顶小部件 `MainWindow` | 固定 760×560（`ResizeMode=NoResize` + `ResizeBorderThickness=0`，不可拖边缩放） | StatsSnapshot 200ms |
 | ② 托盘 | Hardcodet NotifyIcon + ContextMenu | — | 事件驱动 |
 | ③ 悬浮球 | 透明分层窗口 `FloatingBall` | 收起 Ø68 / 展开 470×56 | StatsSnapshot 1s |
 
@@ -54,13 +54,16 @@
 | C-10 | ContextMenu×3 | 卡片 / 模型名 / 标题栏（§1.5） |
 | C-11 | TrayMenu | 全项见 §1.5 |
 | C-12 | FloatingBall | 两态（§4） |
-| C-13 | Dialog ×7 | 倍率配置 / 计价配置 / 手动补录 / 操作日志 / 导出 / 时间范围 / 显示隐藏卡片 |
+| C-13 | Dialog ×8 | 设置 / 倍率配置 / 计价配置 / 手动补录 / 操作日志 / 导出 / 时间范围 / 显示隐藏卡片 |
 | C-14 | MissChip / MulChip / CaliberBadge | 状态徽章族 |
 
-### 1.4 对话框 ×7（皮肤仅改令牌，结构四肤一致）
+### 1.4 对话框 ×8（皮肤仅改令牌，结构四肤一致）
 
-1. **倍率配置**：模型选择；时段行（start/end，0.5h 粒度，可增删）；倍率值；生效日期；当前/下一版本展示条；Local 口径编辑时展示 UTC↔Local 换算提示。
-2. **计价配置**：模型 + 货币(CNY/USD) + 生效日期（按基准日历）；规则卡列表 = 时段行(0.5h) + 星期 chips(1–7，周末红字) + 三单价(input/cache/output per 1M) + 删除；版本条「当前 V3 生效中 → 保存追加 V4」；底部说明（跨午夜平移 + 自动备份）。
+0. **设置**：把散在托盘菜单与 config.json/settings.json 里的可配置项收进一个窗口（替代直接编辑配置文件，小白友好）。代理 = 监听地址（只许回环 host:port，与 Core `ValidateListenAddr` 同规则前置校验）+ 供应商行（名称/上游地址/API Key/模型前缀，可增删；MaxTokens/StripParams/默认供应商等高级项不在此编辑、保存时按行原样保留）；通用 = 生效日期基准（UTC/LOCAL 单选）/ 统计时区（-720…840 每 30 分钟共 53 项下拉）/ 悬浮球透明度滑杆（20–100%）与置顶 / 开机自启（注册表 Run，`Infrastructure.AutoStart` 与托盘共用同一实现）。全部随「保存并生效」统一应用：SaveProxy（密钥 DPAPI 加密落盘）→ ReloadProxyConfig（地址变更自动重启监听）→ 差量应用 settings（基准变更走 SetEffectiveDateMode 含 daily 重算；时区走 SetTimezone）→ RefreshChecks。页脚保留「打开配置文件 / 打开导出目录」逃生口。入口：托盘菜单「设置…」、面板标题栏右键菜单。
+1. **倍率配置**：模型选择；时段 panel 列表（每 panel = 起止时间下拉 + 该时段倍率，panel 外「+ 添加时段」新增一条）；生效日期；当前/下一版本展示条；Local 口径编辑时展示 UTC↔Local 换算提示。打开即载入该模型链尾版本的时段与倍率。
+2. **计价配置**：模型 + 货币(CNY/USD) + 生效日期（按基准日历）；规则卡列表 = 时段行(0.5h，起止时间下拉) + 星期 chips(1–7，周末红字) + 三单价(input/cache/output per 1M) + 删除；版本条「当前 V3 生效中 → 保存覆盖/追加」；底部说明（跨午夜平移 + 自动备份）。打开即载入该模型链尾版本的规则。
+   - **模型键**：一律用卡片同源的完整键 `provider/model`。候选列表不列出被同名规范键遮蔽的遗留裸键（如 `deepseek-flash` 之于 `DeepSeek/deepseek-flash`）——它按序排在规范键之前易被误选，保存到无卡片的键上表现为"保存了但不生效"；读取时仍回退到遗留裸键，使旧配置可见并在保存时改写到规范键。保存后若该键没有任何卡片对应，弹出警告明示"界面上不会看到金额变化"。
+   - **时段编辑基准**：页脚提示当前按哪个日历填时段（`App.Infrastructure.TimeBasis`）。基准 = settings`effective_date_mode`：`local` → 编辑区按本地时间显示/填写，保存自动 `−offset` 换算为 UTC 存储（含跨午夜拆分与星期平移）；`utc` → 原样。缺该换算会让"按本地时间填的优惠时段"落错窗，金额与厂商后台对不上。
 3. **手动补录**：模型选择 / 笔数 N / 命中·未命中·输出 token（total 自动合计只读）/ 提示自动备份与漏抓清理。
 4. **操作日志**：范围切换（按模型/全部）+ 列表（时间/动作/模型/详情）。
 5. **导出**：范围预设 + 自定义起止 + 模型范围 + 小时明细勾选。
@@ -81,6 +84,7 @@
 ● 代理运行中 · 127.0.0.1:8280        [禁用态, 状态灯]
 ─
 打开面板
+设置…
 打开配置文件
 ─
 倍率配置…
@@ -165,7 +169,7 @@ Radius: Window 12 / Card 7 / Menu 9 / Dialog 10 / Control 5 / Badge 5 / Bar 3（
 Font: 全 Cascadia Mono / Consolas（中文回退雅黑）
 字号: 26/14–19/12/10.5–11/8–10(字距.2em)
 Shadow.Float = Blur 26 · Depth 10 · Dir 270 · #000 Opacity .5   Shadow.Env = 无
-动效: 90–120ms · cubic(.3,0,.2,1) · 光标闪烁 1.1s Discrete
+动效: 90–120ms · cubic(.3,0,.2,1) · 状态条光标 1.1s Discrete（S2；本地时钟后的光标已移除）
 ```
 
 **Skin 3 · SwissGrid（瑞士网格，浅色）**
@@ -238,13 +242,17 @@ public static void ApplySkin(string key)   // key: "EditorialInk"|"GraphiteTermi
 3. **禁止 code-behind 缓存 Brush/Color 实例**（皮肤切换后过期）；需要读值时 `FindResource` 现取。
 4. **Storyboard 不能 DynamicResource 到动画目标值**：动画时长/颜色不在皮肤字典中差异化——时长用常量表（§5）；颜色动画若必须随肤，改为绑定属性到 `{DynamicResource}` 的 Brush 上由 WPF 换值，或在切换皮肤时代码重建少量动画。
 5. `DropShadowEffect` 定义在皮肤字典（`Tg.Shadow.Float`），模板里 `Effect="{DynamicResource Tg.Shadow.Float}"`；**Effect 不能共享实例**——字典中用 `x:Shared="false"` 的 DropShadowEffect 资源，或每模板实例内联。
-6. **透明窗口**：主面板/悬浮球 `AllowsTransparency=True` + `WindowChrome(GlassFrameThickness=0, CaptionHeight=46, ResizeBorderThickness=6, UseAeroCaptionButtons=False)`；根 Border CornerRadius=`{DynamicResource Tg.Radius.Window}`，`Background` 绑 `Tg.Bg.Window`。浅色肤(1/3)额外加深描边对比（1px Stroke.Strong），深色肤(2/4)可减弱；窗体外阴影统一由根 Border 的 Effect 提供（见各肤 Shadow.Float）。
-7. PerMonitorV2 DPI：`app.manifest` 声明；窗口位置尺寸持久化时保存工作区坐标并做越界回调。
+6. **透明窗口**：主面板/悬浮球 `AllowsTransparency=True` + `WindowChrome(GlassFrameThickness=0, CaptionHeight=46, ResizeBorderThickness=0, UseAeroCaptionButtons=False)`（主面板 `ResizeMode=NoResize`：尺寸固定，拖边缩放会破坏单列卡片 + 固定 268 侧栏的版式；移动仍由 CaptionHeight 提供）；根 Border CornerRadius=`{DynamicResource Tg.Radius.Window}`，`Background` 绑 `Tg.Bg.Window`。浅色肤(1/3)额外加深描边对比（1px Stroke.Strong），深色肤(2/4)可减弱；窗体外阴影统一由根 Border 的 Effect 提供（见各肤 Shadow.Float）。
+7. PerMonitorV2 DPI：`app.manifest` 声明；窗口位置持久化时保存工作区坐标并做越界回调（尺寸固定，不持久化/不还原）。
+8. **置顶样式重推**：`AllowsTransparency` 分层窗口在 `Show()` 之后立刻赋 `Topmost` 会与 WS_EX_TOPMOST 的样式应用竞态——表现为"置顶按钮已勾选但窗口不是置顶，手动切换一次才生效"。故 `MainWindow.ApplyTopmost` 在值未变时也强制制造一次属性变更（先翻反再翻回），并在 `Loaded`（`DispatcherPriority.Loaded`）与每次收起到球/恢复后重推；悬浮球在自身 `OnLoaded` 里设置故无此问题。
 
 ### 3.3 关键控件样式与 ControlTemplate 规格
 
 **C-03 ModelCard**（Border 圆角 `{Tg.Radius.Card}`，描边 1–1.5px `{Tg.Stroke.Hair}`，背景 `{Tg.Bg.Card}`）：
 - 结构 Grid 行：Header(ProviderBadge/Title/MissChip) → Row1(请求数|增量) → Total 大数字 → Bars×3 → Footer(实际/倍率分段+口径点)。
+- 点击：卡片任意位置（含空白区与子控件）都选中该卡——模板根 Grid 需 `Background=Transparent`（否则空白区不可命中），窗口侧用 Preview（隧道）事件，且不置 Handled，子控件功能不受影响。
+- 口径点文案 = **当前**口径（与详情侧栏 `ScopeTag` 一致）；点击动作写在 ToolTip。
+- RatioBar 数值 = 该部分具体 token 数（非百分比）。
 - **选中态四肤差异**（SelectorVisual 放卡片模板顶层附加元素）：
   - S1：描边换 `Stroke.Strong` + 偏移硬影；
   - S2：描边换 `Accent.Brand` + 四角 L 形记号（2 枚 10×10 Border，只留相邻两边，圆角 8）；
@@ -252,11 +260,12 @@ public static void ApplySkin(string key)   // key: "EditorialInk"|"GraphiteTermi
   - S4：描边换 `Accent.Brand` + 四角瞄准框（同 S2 几何、颜色尾焰橙、粗 2px）。
 - 口径 UTC：卡描边与徽章换 `State.Warn`（200ms ColorAnimation）。
 
-**C-04 RatioBar**：Grid 3 列 `32 | * | 40`；Track 高 6–7，`CornerRadius={Tg.Radius.Bar}`+`ClipToBounds`，底 `Tg.Bg.Inset`（S4 加刻纹 DrawingBrush，S2 加竖刻纹）；Fill = Rectangle `Width` 绑定占比（`*` 轨道内用 `ColumnDefinition` + `WidthConverter`，或 GridSplitter 方式），圆角同 Track。
+**C-04 RatioBar**：Grid 4 列 `34 | 150 | Auto | *`（条定宽，右侧数量文本紧随条后，末列 `*` 仅占位；数值 = 该部分具体 token 数，非百分比）；Track 高 6–7，`CornerRadius={Tg.Radius.Bar}`+`ClipToBounds`，底 `Tg.Bg.Inset`（S4 加刻纹 DrawingBrush，S2 加竖刻纹）；Fill = Rectangle `Width` 绑定占比（`*` 轨道内用 `ColumnDefinition` + `WidthConverter`，或 GridSplitter 方式），圆角同 Track。
 
 **C-05 RingGauge**：Viewbox 88–96；底层 track Ellipse(Stroke={Tg.Bg.Inset} 或弱线) + 前景 `Path`(ArcSegment, StrokeThickness 6–9, StrokeStart/EndLineCap=Round, StrokeDashArray 进度) + 中央 % TextBlock；旋转 -90° 起点朝上。S2 外圈叠加虚线刻度圆（DashArray 1 5）；S4 底层为雷达：同心环 2 + 十字线 + 扫描扇 Path(Op .28, RotateTransform 6s Linear 永动)。
 
-**C-07 TrendChart7**：`StreamGeometry/Polyline`（PenLineCap/Join=Round，Stroke 1.6–2.2 `{Tg.Chart.O→Brand}`）+ 3 条弱网格线 + 7 个透明热点 Ellipse(r≈6) → 命中弹 Popup tooltip（「MM-DD · N.NM」）。入场：`StrokeDashOffset` From=L To=0（时长见表）；终点标记（S3/S4）完成后 scale 0→1。
+**C-07 TrendChart7**：`StreamGeometry/Polyline`（PenLineCap/Join=Round，Stroke 1.6–2.2 `{Tg.Chart.O→Brand}`）+ 3 条弱网格线 + hover 焦点（竖导引虚线 + 焦点圆点）→ Popup tooltip（「MM-DD · N.NM」）。
+命中规则：鼠标进入图表即生效（**无需点击**），按**横坐标**取最近的一天（不必移到点上），判定范围 = 整块图表；首次绘制须铺 `Transparent` 填充层，否则空白区不参与命中测试。入场：`StrokeDashOffset` From=L To=0（时长见表）；终点标记（S3/S4）完成后 scale 0→1。
 
 **C-12 MarqueeBall**：见 §4。
 
@@ -280,12 +289,13 @@ public static void ApplySkin(string key)   // key: "EditorialInk"|"GraphiteTermi
 **收起态（Ø68，边缘吸附，可拖拽）：**
 - 分层：底盘（S1 纸白+墨环 / S2 凸面+描边 / S3 纯白+1.5px 墨环 / S4 云白渐变+海军环）/ 命中弧（Stroke 4，起点朝上，`= hit/(hit+miss)`）/ 中心两行：总量缩写（14–15px · 800 · tabular，如 `8.6M`）与增量（9px · `{Tg.State.Ok}`，`▲+1.2K`）。
 - S4 专属：球内叠加雷达扫描扇（Op .22，6s）。
-- 拖拽中：scale 1.06 + 阴影加深；接近屏幕边缘 12px 磁吸，吸附后 180ms 回弹落位。
+- 拖拽中（按住）：**盘内元素**（命中弧 + 雷达 + 数字）scale 1.06 且命中弧描边 4→5.5——底盘 Ø68 不参与缩放（底盘正好铺满 68px 窗口，整盘放大会被窗口裁掉一圈边）；接近屏幕边缘 12px 磁吸，吸附后 180ms 回弹落位。
 - 右键 = 托盘菜单；双击 = 回主面板。
 
 **展开态（470×56 胶囊，CornerRadius=高/2 或 14–16）：**
 - 结构：`[状态徽 LIVE/LED] | 跑马灯窗口(两端 5% 渐隐遮罩) | 右侧双钟(LOCAL 大字 + UTC 小字)`。
-- 条目排版：`模型名(Info色·800) 值(Ink.Primary·tabular) ▲增量(Ok) / 分隔`，条目水平 padding 16–17。
+- 条目排版：`模型名(Info色·800) 指标名(Ink.Faint) 值(Ink.Primary·tabular) ▲增量(Ok) / 分隔`，条目水平 padding 16–17。
+- 条目内容（两种模式，用户要求）：① **有模型正在跑**（代理在途请求，或 15s 内有过请求）→ 循环该模型的 TOTAL / 命中 / 未命中 / 输出 / 命中率 / 调用次数；② **空闲** → 按面板卡片顺序循环每张可见卡片的 TOTAL 与命中率（取该卡自己的口径与倍率视图）。
 - 动画：整条内容复制两份，`TranslateTransform.X` 0→-50% 16s Linear 永动；数据 1s 刷新只改文本**不重置动画**；鼠标悬停 `Pause`。
 - 触发：双击球/收起按钮切换；高度 0→56 + 淡入 220ms。
 
@@ -300,7 +310,7 @@ public static void ApplySkin(string key)   // key: "EditorialInk"|"GraphiteTermi
 | 选中卡切换 | SelectorVisual | 颜色/显隐 | 120–180 | Decelerate | 无回弹 |
 | 口径切换 | 徽章/描边 | Color | 200 | Linear | ColorAnimation |
 | usage 事件到达 | 增量/总量 | 数字 CountUp | 500–600 | Power3 出 | 到位即静止；S4 追加 1.06→1 脉冲 |
-| 悬停热点 | 折线 Popup | 显隐 | 0/120 | — | 跟随鼠标钳位 |
+| 悬停焦点 | 折线导引线+圆点+Popup | 显隐 | 0/120 | — | 按横坐标取最近一天；跟随鼠标钳位 |
 | 图表入场 | TrendChart7 / RingGauge | StrokeDashOffset | 600–700 | Power3 出 | 仅首次与重算后 |
 | 漏抓横幅 | Banner | Height+Opacity | 180 | Decelerate | 静态常驻无闪烁 |
 | 球两态切换 | FloatingBall | Size+Opacity | 220 | Decelerate | — |
@@ -311,7 +321,7 @@ public static void ApplySkin(string key)   // key: "EditorialInk"|"GraphiteTermi
 
 **「流量激增 → 环境动效加速」映射与克制规则：**
 - 触发：60s 滑窗增量 > 基线均值 + 3σ（或 > 50K tokens/s）；解除需连续 30s 回落（滞回）。
-- 映射：S4 雷达扫描 6s→2.5s；S2 光标闪烁 1.1s→0.45s；S1/S3 无循环动效 → 改为增量数字的脉冲频率提高（静止→1.2Hz 内一次性脉冲）；跑马灯速度不随激增变化（可读性优先）。
+- 映射：S4 雷达扫描 6s→2.5s；S2 状态条光标闪烁 1.1s→0.45s；S1/S3 无循环动效 → 改为增量数字的脉冲频率提高（静止→1.2Hz 内一次性脉冲）；跑马灯速度不随激增变化（可读性优先）。
 - 克制红线：任何循环动效透明度 ≤.35、频率 ≤2.5Hz、面积 ≤1/8 卡片；激增态只允许同时加速**一处**环境动效；面板永不整体闪烁、永不发声。
 
 ---

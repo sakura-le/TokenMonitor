@@ -592,4 +592,80 @@ public class ProxyEngineTests
         release2.TrySetResult();
         proxy2.Dispose();
     }
+
+    /// <summary>
+    /// 回归：InFlightModels 必须在流式生成期间报告正在跑的模型、结束后清空
+    /// （悬浮球"当前有模型正在跑"的判定依据）。
+    /// </summary>
+    [Fact]
+    public async Task Proxy_InFlightModels_ReportsModelWhileStreaming()
+    {
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var upstream = await MockUpstream.StartAsync(async (_, ctx, _) =>
+        {
+            ctx.Response.ContentType = "text/event-stream";
+            await ctx.Response.WriteAsync(": wait\n\n");
+            await ctx.Response.Body.FlushAsync();
+            await release.Task;
+            await ctx.Response.WriteAsync("data: {\"model\":\"test-m\",\"usage\":{\"prompt_tokens\":1,\"completion_tokens\":1,\"total_tokens\":2}}\n\n");
+            await ctx.Response.WriteAsync("data: [DONE]\n\n");
+        });
+        var cfg = Config(upstream.Port);
+        var (proxy, _, addr) = NewProxy(cfg, new ProxyOptions { SseReadCap = TimeSpan.FromSeconds(30) });
+        proxy.Start(addr);
+        Assert.Empty(proxy.InFlightModels);
+
+        using var client = new HttpClient();
+        var request = client.PostAsync(ProxyUrl(addr, "/v1/chat/completions"),
+            new StringContent("""{"model":"test-m","stream":true}""", Encoding.UTF8, "application/json"));
+        await TestHelpers.WaitForAsync(() => proxy.InFlightCaptures == 1, TimeSpan.FromSeconds(10), "在途捕获未建立");
+        Assert.Contains("test-m", proxy.InFlightModels);
+
+        release.TrySetResult();
+        await TestHelpers.WaitForAsync(() => proxy.InFlightCaptures == 0, TimeSpan.FromSeconds(10), "在途未归零");
+        Assert.Empty(proxy.InFlightModels);
+        await request;
+        proxy.Dispose();
+    }
+
+    /// <summary>
+    /// 回归：Stop 必须能在带 SynchronizationContext 的线程（WPF UI 线程）上安全调用。
+    /// 宿主停止路径内部 await 默认捕获上下文；若在同一线程 GetResult() 阻塞，续体被排进
+    /// 该线程的队列 → 互锁、进程永不退出（实测托盘「退出」后只能任务管理器结束）。
+    /// 这里用一个"只入队不执行"的上下文模拟被同步阻塞的 UI 派发线程。
+    /// </summary>
+    [Fact]
+    public async Task Proxy_Stop_OnThreadWithSynchronizationContext_DoesNotDeadlock()
+    {
+        using var upstream = await MockUpstream.StartAsync(
+            MockResponses.JsonResponse("""{"usage":{"prompt_tokens":5,"completion_tokens":5,"total_tokens":10}}"""));
+        var cfg = Config(upstream.Port);
+        var (proxy, _, addr) = NewProxy(cfg);
+        proxy.Start(addr);
+
+        var blocking = new BlockingSynchronizationContext();
+        var stopTask = Task.Run(() =>
+        {
+            SynchronizationContext.SetSynchronizationContext(blocking);
+            try { proxy.Stop(TimeSpan.FromSeconds(2)); }
+            finally { SynchronizationContext.SetSynchronizationContext(null); }
+        });
+
+        var done = await TestHelpers.TryWaitForAsync(() => stopTask.IsCompleted, TimeSpan.FromSeconds(20));
+        Assert.True(done, $"Stop 在带 SynchronizationContext 的线程上互锁（残留续体 {blocking.PendingPosts} 个）");
+        Assert.Equal(0, blocking.PendingPosts);
+        Assert.False(proxy.IsListening);
+        proxy.Dispose();
+    }
+
+    /// <summary>只把续体揽入计数、永不执行 —— 模拟被同步阻塞的 UI 派发线程。</summary>
+    private sealed class BlockingSynchronizationContext : SynchronizationContext
+    {
+        private int _pending;
+        public int PendingPosts => Volatile.Read(ref _pending);
+
+        public override void Post(SendOrPostCallback d, object? state) => Interlocked.Increment(ref _pending);
+
+        public override void Send(SendOrPostCallback d, object? state) => d(state);
+    }
 }

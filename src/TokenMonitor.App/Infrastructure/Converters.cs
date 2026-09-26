@@ -42,6 +42,16 @@ public sealed class BoolToVisibilityConverter : IValueConverter
         => value is Visibility vis && vis == Visibility.Visible;
 }
 
+/// <summary>bool 取反（互斥 RadioButton 共用一个 bool：一个绑原值、一个绑反值）。</summary>
+public sealed class InverseBoolConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        => value is bool b && !b;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => value is bool b && !b;
+}
+
 /// <summary>null/空字符串 → Collapsed，否则 Visible。</summary>
 public sealed class NullToVisibilityConverter : IValueConverter
 {

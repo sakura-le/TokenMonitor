@@ -10,7 +10,7 @@ namespace TokenMonitor.App.Tray;
 
 /// <summary>托盘菜单回调集（01-§2.3.10 契约；动作实现由 ViewModel/App 注入）。</summary>
 public sealed record TrayMenuCallbacks(
-    Action OpenPanel, Action OpenConfigFile, Action MultiplierConfig, Action PricingConfig,
+    Action OpenPanel, Action OpenSettings, Action OpenConfigFile, Action MultiplierConfig, Action PricingConfig,
     Action<int> TimezoneSelected,
     Action ToggleEffectiveMode,
     Action ExportToday, Action ExportMonth, Action ExportRecent7Days, Action OpenExportDir,
@@ -89,6 +89,7 @@ public sealed class TrayController : IDisposable
         menu.Items.Add(new Separator { Style = (Style)System.Windows.Application.Current.FindResource("Tg.MenuSeparator") });
 
         menu.Items.Add(Item("打开面板", cb.OpenPanel));
+        menu.Items.Add(Item("设置…", cb.OpenSettings));
         menu.Items.Add(Item("打开配置文件", cb.OpenConfigFile));
         menu.Items.Add(Sep());
 
@@ -157,13 +158,14 @@ public sealed class TrayController : IDisposable
         menu.Items.Add(Item("导入旧数据…", cb.ImportLegacy));
         menu.Items.Add(Sep());
 
-        // 皮肤子菜单（§6）
+        // 皮肤子菜单（§6）：只显示皮肤名称（描述文字过长，用户要求在菜单里省略）
         var skin = new MenuItem { Header = "皮肤", Style = (Style)System.Windows.Application.Current.FindResource("Tg.MenuItem") };
         foreach (var key in ThemeService.SkinKeys)
         {
             var captured = key;
-            var mi = Item($"{ThemeService.DisplayName(key)}　{ThemeService.Description(key)}",
+            var mi = Item(ThemeService.DisplayName(key),
                 () => { _svc.Theme.ApplySkin(captured); RefreshChecks(); });
+            mi.ToolTip = ThemeService.Description(key);
             mi.IsCheckable = true;
             r.Skins.Add((mi, key));
             skin.Items.Add(mi);

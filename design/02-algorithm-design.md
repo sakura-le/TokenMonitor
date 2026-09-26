@@ -469,6 +469,7 @@ string EffectiveDate(long ts) =>
 ```
 - 原实现：`effectiveDate(ts)` 按 `time.FixedZone(offset)` 或 UTC 格式化——语义逐字保持。`SetEffectiveContext(mode, offsetMin)`：mode 非 "local" 一律归 "utc"（原 SetEffectiveDateMode 防御保持）；变更即失效平移缓存并广播 ConfigChanged [C17]。
 - 口径只影响**版本选择与星期判定**的日历；时段数值恒按 UTC 存储、匹配前按视图口径平移（§4.5）。
+- 委托出口 `QuoteRate/QuoteCost(key, ts, hour, offsetMin, …)` 的 `offsetMin` **只**决定时段表/星期口径（0 → UTC 表，非 0 → 按该 offset 平移；`RecalcDerived` 固定传 0），版本选择的日历恒取 `_offsetMin`——若改用调用方 offset，`RecalcDerived` 在 mode=local 下会退回 UTC 日历选版本，与 `Accumulator` 实时路径选中不同版本，[C1] 幂等前提被破坏。
 
 ### 4.4 分数小时匹配 [C4]
 
@@ -483,6 +484,9 @@ string EffectiveDate(long ts) =>
 ### 4.5 Local 窗口平移算法（含星期平移、30/45 分钟时区）[S3 缓存]
 
 时段/规则恒按 UTC 存储；Local 视图匹配前平移 `+shift`（`shift = offsetMin / 60.0`，可为负，如 UTC-3:30 → −3.5）。两个纯函数与前端 `tzShift.js` 同口径，供引擎与对话框共用（Local 口径编辑时双向转换：`utcToLocal = normalize(items, +shift)`、`localToUtc = normalize(items, -shift)`）。
+
+- **对话框侧换算已落地（`App.Infrastructure.TimeBasis`，[C13] 回归）**：`effective_date_mode=local` 时，打开对话框把存量 UTC 时段 `+offset` 平移到本地时钟显示、保存时把用户填写的本地时段 `−offset` 平移回 UTC 落库；`utc` 时原样。缺这一步的后果是**对不上账**：用户在"基准 LOCAL"下按本地时间填的时段被引擎当作 UTC 时段匹配，本地晚间（厂商优惠段）落到峰时窗——实测同一份配置"显示 ¥4.40 / 厂商后台 ¥2.2"，补上换算后为 ¥2.53（与按本地时钟手算的 ¥2.5432 一致）。
+- 不变式（`PricingApplyTests.DialogRoundTrip_*`）：`stored →(+offset)→ 显示 →(−offset)→ 落库` 后，UTC 与 Local 两口径在整周每个半小时格上取值完全相同。
 
 **A. `ShiftPeriodsToLocal(periods, offsetMin)`**（倍率时段，无星期维度；对齐原 `shiftPeriodsToLocal`）：
 

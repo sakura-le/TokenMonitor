@@ -42,6 +42,7 @@ public partial class MainViewModel : ObservableObject
         OpenOpLogsCommand = new RelayCommand<string?>(m => svc.Dialogs.ShowOpLogs(m));
         OpenExportCommand = new RelayCommand(() => svc.Dialogs.ShowExport());
         OpenCardVisibilityCommand = new RelayCommand(() => svc.Dialogs.ShowCardVisibility());
+        OpenSettingsCommand = new RelayCommand(() => svc.Dialogs.ShowSettings());
         OpenTimeRangeCommand = new RelayCommand<CardViewModel?>(c => svc.Dialogs.ShowTimeRange(c));
         ResetTodayCommand = new RelayCommand<string?>(m => ResetToday(m));
         SelectCardCommand = new RelayCommand<CardViewModel?>(c => { if (c is not null) SelectedCard = c; });
@@ -94,11 +95,10 @@ public partial class MainViewModel : ObservableObject
     public RelayCommand<string?> ResetTodayCommand { get; }
     public RelayCommand<CardViewModel?> SelectCardCommand { get; }
     public RelayCommand OpenConfigFileCommand { get; }
+    public RelayCommand OpenSettingsCommand { get; }
 
     partial void OnIsTopmostChanged(bool value) => Application.Current?.Dispatcher.BeginInvoke(() =>
-    {
-        if (_svc.PanelWindow is not null) _svc.PanelWindow.Topmost = value;
-    });
+        _svc.PanelWindow?.ApplyTopmost(value));   // 经 ApplyTopmost 强制下发样式（值未变时 WPF 不重下发）
 
     partial void OnPanelOpacityChanged(double value)
     {
@@ -126,7 +126,11 @@ public partial class MainViewModel : ObservableObject
     public void Initialize()
     {
         var ui = _svc.Engine.Config.Ui;
-        var hidden = ui?.HiddenCards ?? new HashSet<string>();
+        // 隐藏卡必须回填 _hiddenMemo：ApplySnapshot 建卡时按它置 IsHidden。
+        // 此前只取了局部变量未落 memo → 每次重启所有卡都以"显示"重建，
+        // 且随后的任意一次 ui_state 保存会把 hidden_cards 覆盖成空集。
+        foreach (var key in ui?.HiddenCards ?? (IReadOnlySet<string>)new HashSet<string>())
+            _hiddenMemo.Add(key);
         foreach (var kv in ui?.CardScope ?? (IReadOnlyDictionary<string, string>)new Dictionary<string, string>())
             _scopeMemo[kv.Key] = kv.Value;
         foreach (var kv in ui?.CardMultiplierView ?? (IReadOnlyDictionary<string, bool>)new Dictionary<string, bool>())

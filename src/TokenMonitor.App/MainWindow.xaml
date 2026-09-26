@@ -5,12 +5,15 @@
         xmlns:controls="clr-namespace:TokenMonitor.App.Controls"
         xmlns:infra="clr-namespace:TokenMonitor.App.Infrastructure"
         Title="Token Monitor" Width="760" Height="560" MinWidth="720" MinHeight="520"
+        MaxWidth="760" MaxHeight="560"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
-        ShowInTaskbar="True" ShowActivated="True" ResizeMode="CanResize"
+        ShowInTaskbar="True" ShowActivated="True" ResizeMode="NoResize"
         TextOptions.TextFormattingMode="Display" UseLayoutRounding="True">
 
     <shell:WindowChrome.WindowChrome>
-        <shell:WindowChrome GlassFrameThickness="0" CaptionHeight="46" ResizeBorderThickness="6"
+        <!-- ResizeBorderThickness=0 + ResizeMode=NoResize：尺寸固定，禁止拖边改变窗口大小
+             （单列卡片 + 固定 268 侧栏的版式被拖宽后整体拉伸变形）。移动仍由 CaptionHeight 提供。 -->
+        <shell:WindowChrome GlassFrameThickness="0" CaptionHeight="46" ResizeBorderThickness="0"
                             CornerRadius="0" UseAeroCaptionButtons="False"/>
     </shell:WindowChrome.WindowChrome>
 
@@ -69,13 +72,17 @@
                     <!-- 标题栏右键菜单（§1.5 第三层） -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,12,0" VerticalAlignment="Center"
                                 shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                        <TextBlock Text="基准" Style="{StaticResource Tg.MicroLabel}"
+                                   FontFamily="{DynamicResource Tg.Font.Body}" Margin="0,0,5,0"/>
                         <Border Style="{StaticResource Tg.Badge}" BorderThickness="1" Padding="8,2"
-                                BorderBrush="{DynamicResource Tg.State.Info}" Background="{DynamicResource Tg.Bg.Inset}">
+                                BorderBrush="{DynamicResource Tg.State.Info}" Background="{DynamicResource Tg.Bg.Inset}"
+                                ToolTip="生效日期基准：UTC / LOCAL。决定版本生效日期、时段与跨午夜归属按哪个日历解释（托盘菜单「生效日期基准」可切换）">
                             <TextBlock Text="{Binding CaliberBadgeText}" FontSize="10.5" FontWeight="Bold"
                                        FontFamily="{DynamicResource Tg.Font.Num}"
                                        Foreground="{DynamicResource Tg.State.Info}"/>
                         </Border>
-                        <TextBlock Text="透明" Style="{StaticResource Tg.MicroLabel}" Margin="10,0,4,0"
+                        <TextBlock Text="│" Margin="10,0" Foreground="{DynamicResource Tg.Stroke.Hair}"/>
+                        <TextBlock Text="透明" Style="{StaticResource Tg.MicroLabel}" Margin="0,0,4,0"
                                    FontFamily="{DynamicResource Tg.Font.Body}"/>
                         <Slider Style="{StaticResource Tg.Slider}" Width="62" Minimum="0.2" Maximum="1.0"
                                 Value="{Binding PanelOpacity}" VerticalAlignment="Center"/>
@@ -117,7 +124,7 @@
                                     <DataTemplate>
                                         <controls:ModelCard Margin="0,0,0,0"
                                             MouseRightButtonDown="Card_MouseRightButton"
-                                            MouseLeftButtonDown="Card_MouseLeftButton"
+                                            PreviewMouseLeftButtonDown="Card_MouseLeftButton"
                                             ProviderText="{Binding ProviderTag}"
                                             ProviderKind="{Binding ProviderKind}"
                                             ModelName="{Binding Model}"

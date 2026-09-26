@@ -13,6 +13,8 @@ public sealed partial class MarqueeItemVm : ObservableObject
 {
     public string Key { get; init; } = "";
     [ObservableProperty] private string _title = "";
+    /// <summary>指标名（TOTAL/命中/未命中/输出/命中率/调用）。</summary>
+    [ObservableProperty] private string _metric = "";
     [ObservableProperty] private string _value = "0";
     [ObservableProperty] private string _delta = "";
 }
@@ -70,28 +72,124 @@ public partial class BallViewModel : ObservableObject
         BallDelta = delta > 0 ? "▲" + Fmt.Compact(delta) : "";
         HitFraction = hit + miss > 0 ? (double)hit / (hit + miss) : 0;
 
-        // 跑马灯条目：本地口径各模型（原地改文本，动画不重置）
-        var seen = new HashSet<string>();
+        RebuildMarquee(s);
+    }
+
+    /// <summary>最近活跃多久之内仍算"正在跑"（衔接同一模型的连续请求，避免模式来回跳）。</summary>
+    private const int ActiveGraceSeconds = 15;
+
+    /// <summary>
+    /// 跑马灯内容（用户要求）：
+    /// ① 有模型正在跑（代理在途，或 <see cref="ActiveGraceSeconds"/> 秒内有过请求）→ 循环该模型的
+    ///    总 token / 命中 / 未命中 / 输出 / 命中率 / 调用次数；
+    /// ② 空闲 → 按面板卡片顺序循环每张**可见卡片**的总 token 与命中率（取该卡自己的口径与倍率视图）。
+    /// </summary>
+    private void RebuildMarquee(StatsSnapshot s)
+    {
+        var rows = new List<MarqueeRow>();
+        var running = PickRunningModel(s);
+        if (running is { } m)
+        {
+            var title = Label(m.Provider, m.Model);
+            rows.Add(new($"{title}|TOTAL", title, "TOTAL", Fmt.N0(m.TotalTokens),
+                m.DeltaTokens > 0 ? "+" + Fmt.Compact(m.DeltaTokens) : ""));
+            rows.Add(new($"{title}|HIT", title, "命中", Fmt.N0(m.CacheHitTokens), ""));
+            rows.Add(new($"{title}|MISS", title, "未命中", Fmt.N0(m.CacheMissTokens), ""));
+            rows.Add(new($"{title}|OUT", title, "输出", Fmt.N0(m.CompletionTokens), ""));
+            rows.Add(new($"{title}|RATE", title, "命中率", RateText(m.CacheHitTokens, m.CacheMissTokens), ""));
+            rows.Add(new($"{title}|CALLS", title, "调用", Fmt.N0(m.RequestCount), ""));
+        }
+        else
+        {
+            foreach (var card in _svc.Main?.VisibleCards ?? Enumerable.Empty<CardViewModel>())
+            {
+                var snap = FindModel(s, card.Key, card.IsUtc);
+                if (snap is null) continue;
+                var title = Label(snap.Provider, snap.Model);
+                var (tot, h, mi) = card.MultiplierView
+                    ? (snap.MulTotal, snap.MulCacheHit, snap.MulCacheMiss)
+                    : (snap.TotalTokens, snap.CacheHitTokens, snap.CacheMissTokens);
+                rows.Add(new($"{title}|TOTAL", title, "TOTAL", Fmt.N0(tot), ""));
+                rows.Add(new($"{title}|RATE", title, "命中率", RateText(h, mi), ""));
+            }
+        }
+        SyncItems(rows);
+    }
+
+    /// <summary>挑选"正在跑"的模型：在途优先，其次最近活跃；无则 null（进入卡片汇总模式）。</summary>
+    private ModelSnapshot? PickRunningModel(StatsSnapshot s)
+    {
+        var inFlight = _svc.Engine.Proxy.InFlightModels;
+        ModelSnapshot? best = null;
+        var bestScore = long.MinValue;
         foreach (var m in s.LocalModels)
         {
             var key = m.Provider + "/" + m.Model;
-            seen.Add(key);
-            var title = (string.IsNullOrEmpty(m.Provider) ? m.Model : m.Provider + "-" + m.Model).ToUpperInvariant();
-            if (!_items.TryGetValue(key, out var vm))
-            {
-                vm = new MarqueeItemVm { Key = key, Title = title };
-                _items[key] = vm;
-                Items.Add(vm);
-            }
-            vm.Title = title;
-            vm.Value = Fmt.N0(m.TotalTokens);
-            vm.Delta = m.DeltaTokens > 0 ? "+" + Fmt.Compact(m.DeltaTokens) : "";
+            var flying = inFlight.Count > 0 && inFlight.Any(f => SameModelName(f, key));
+            var age = s.CreatedAtUnix - m.LastActiveUnix;
+            if (!flying && age > ActiveGraceSeconds) continue;
+            var score = (flying ? 1_000_000_000L : 0) + m.LastActiveUnix;
+            if (score > bestScore) { bestScore = score; best = m; }
         }
-        for (var i = Items.Count - 1; i >= 0; i--)
+        return best;
+    }
+
+    /// <summary>请求模型名与快照键的宽松匹配（代理侧是原始请求名，快照键为 provider/model，且可能是别名）。</summary>
+    private static bool SameModelName(string requestModel, string snapshotKey)
+    {
+        if (string.Equals(requestModel, snapshotKey, StringComparison.OrdinalIgnoreCase)) return true;
+        static string Seg(string s)
         {
-            if (seen.Contains(Items[i].Key)) continue;
-            _items.Remove(Items[i].Key);
-            Items.RemoveAt(i);
+            var i = s.LastIndexOf('/');
+            return i < 0 ? s : s[(i + 1)..];
+        }
+        return string.Equals(Seg(requestModel), Seg(snapshotKey), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static ModelSnapshot? FindModel(StatsSnapshot s, string key, bool utc)
+    {
+        foreach (var m in utc ? s.UtcModels : s.LocalModels)
+            if (m.Provider + "/" + m.Model == key || (m.Provider.Length == 0 && m.Model == key)) return m;
+        return null;
+    }
+
+    private static string RateText(long hit, long miss)
+        => hit + miss > 0 ? Fmt.Pct((double)hit / (hit + miss)) + "%" : "—";
+
+    /// <summary>模型显示名：PROVIDER-MODEL（无 provider 时仅模型名），全大写。</summary>
+    private static string Label(string provider, string model)
+        => (string.IsNullOrEmpty(provider) ? model : provider + "-" + model).ToUpperInvariant();
+
+    private readonly record struct MarqueeRow(string Key, string Title, string Metric, string Value, string Delta);
+
+    /// <summary>行集合未变则原地改文本（不打断滚动节奏）；模式切换/模型增删才重建。</summary>
+    private void SyncItems(List<MarqueeRow> rows)
+    {
+        var same = Items.Count == rows.Count;
+        if (same)
+            for (var i = 0; i < rows.Count; i++)
+                if (Items[i].Key != rows[i].Key) { same = false; break; }
+
+        if (same)
+        {
+            for (var i = 0; i < rows.Count; i++)
+            {
+                var it = Items[i];
+                it.Title = rows[i].Title;
+                it.Metric = rows[i].Metric;
+                it.Value = rows[i].Value;
+                it.Delta = rows[i].Delta;
+            }
+            return;
+        }
+
+        _items.Clear();
+        Items.Clear();
+        foreach (var r in rows)
+        {
+            var vm = new MarqueeItemVm { Key = r.Key, Title = r.Title, Metric = r.Metric, Value = r.Value, Delta = r.Delta };
+            _items[r.Key] = vm;
+            Items.Add(vm);
         }
     }
 

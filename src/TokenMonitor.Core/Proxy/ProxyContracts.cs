@@ -24,6 +24,9 @@ public interface IProxyEngine : IDisposable
     /// <summary>在途捕获计数（诊断/退出等待）。</summary>
     int InFlightCaptures { get; }
 
+    /// <summary>在途请求的模型名集合（诊断：判断某模型是否正在跑；空集 = 空闲）。</summary>
+    IReadOnlyCollection<string> InFlightModels { get; }
+
     /// <summary>启动监听。绑定前 TcpListener 预检端口占用 [C19-④]；失败抛 ProxyStartException 并已发出 StateChanged(false, error)。</summary>
     void Start(string listenAddr);
 

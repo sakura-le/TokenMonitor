@@ -45,6 +45,9 @@ public sealed class ProxyEngine : IProxyEngine
     private CancellationTokenSource? _captureCts;
     private volatile bool _started;
     private int _inFlight;
+    /// <summary>按模型统计在途请求（诊断：悬浮球据此判断哪个模型正在跑）。</summary>
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, int> _inFlightByModel =
+        new(StringComparer.Ordinal);
     private string _listenAddr = string.Empty;
 
     public ProxyEngine(Func<ProxyConfig> configAccessor, IUsageIngestor ingestor,
@@ -60,6 +63,10 @@ public sealed class ProxyEngine : IProxyEngine
     public bool IsListening => _started;
     public string ListenAddr => _listenAddr;
     public int InFlightCaptures => Volatile.Read(ref _inFlight);
+
+    /// <summary>在途请求的模型名集合（原始请求模型名；空集 = 当前空闲）。</summary>
+    public IReadOnlyCollection<string> InFlightModels =>
+        _inFlightByModel.Where(kv => kv.Value > 0).Select(kv => kv.Key).ToArray();
     public event EventHandler<ProxyStateChangedEventArgs>? StateChanged;
 
     // —— 启动 / 停止 ——
@@ -115,12 +122,13 @@ public sealed class ProxyEngine : IProxyEngine
             if (!_started && _app is null) return; // 幂等
             _started = false;
         }
+        _inFlightByModel.Clear();   // 停止后不应残留"正在跑"的模型
         Logger.Info("Proxy", "代理停止中（优雅等待在途捕获）");
         try
         {
             // 1. 停止接受新连接（短排空窗口；在途捕获为分离任务，不依赖响应存续 [S5]）
             var drain = TimeSpan.FromMilliseconds(Math.Min(1000, Math.Max(50, gracefulTimeout.TotalMilliseconds)));
-            _app?.StopAsync(drain).GetAwaiter().GetResult();
+            StopHostQuiet(_app, drain);
         }
         catch (Exception ex)
         {
@@ -136,7 +144,7 @@ public sealed class ProxyEngine : IProxyEngine
             }
             // 3. 取消捕获 CTS（在途 SSE 续读任务随上限 CTS 链路中止）
             _captureCts?.Cancel();
-            _app?.StopAsync(TimeSpan.FromSeconds(1)).GetAwaiter().GetResult();
+            StopHostQuiet(_app, TimeSpan.FromSeconds(1));
         }
         catch (Exception ex)
         {
@@ -156,8 +164,21 @@ public sealed class ProxyEngine : IProxyEngine
 
     private void DisposeAppQuiet()
     {
-        try { _app?.DisposeAsync().GetAwaiter().GetResult(); } catch { }
+        try { StopHostQuiet(_app, TimeSpan.FromSeconds(1)); _app?.DisposeAsync().GetAwaiter().GetResult(); } catch { }
         _app = null;
+    }
+
+    /// <summary>
+    /// 同步等待宿主停止/释放：必须脱离调用线程的 SynchronizationContext。
+    /// ASP.NET Core 主机的停止路径内部大量 await（默认捕获上下文），若在带
+    /// SynchronizationContext 的线程（WPF UI 线程）上 GetResult() 阻塞，续体被排入
+    /// 该线程的队列而永远得不到执行 → 互锁。实测现象：托盘「退出」后日志停在
+    /// 「代理停止中（优雅等待在途捕获）」、进程只能任务管理器结束。
+    /// </summary>
+    private static void StopHostQuiet(WebApplication? app, TimeSpan timeout)
+    {
+        if (app is null) return;
+        Task.Run(() => app.StopAsync(timeout)).GetAwaiter().GetResult();
     }
 
     private static (IPAddress Ip, int Port) ParseLoopback(string listenAddr)
@@ -357,6 +378,7 @@ public sealed class ProxyEngine : IProxyEngine
         // 7) 转发 + 响应拦截（可捕获 JSON 请求）；纯透传请求原样转发，不解析不捕获 [C2]
         ctx.Items["Forwarding"] = true;
         Interlocked.Increment(ref _inFlight);
+        EnterModelInFlight(model);
         try
         {
             if (isCaptureJson)
@@ -366,8 +388,22 @@ public sealed class ProxyEngine : IProxyEngine
         }
         finally
         {
+            ExitModelInFlight(model);
             Interlocked.Decrement(ref _inFlight);
         }
+    }
+
+    private void EnterModelInFlight(string model)
+    {
+        if (model.Length == 0) return;
+        _inFlightByModel.AddOrUpdate(model, 1, (_, v) => v + 1);
+    }
+
+    private void ExitModelInFlight(string model)
+    {
+        if (model.Length == 0) return;
+        _inFlightByModel.AddOrUpdate(model, 0, (_, v) => v - 1);
+        if (_inFlightByModel.TryGetValue(model, out var n) && n <= 0) _inFlightByModel.TryRemove(model, out _);
     }
 
     private async Task ForwardPassthroughAsync(HttpContext ctx, string inboundPath, ProviderConfig provider,

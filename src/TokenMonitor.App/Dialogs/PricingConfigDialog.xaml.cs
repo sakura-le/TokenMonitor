@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using TokenMonitor.App.Infrastructure;
 using TokenMonitor.App.Services;
 using TokenMonitor.Core.Pricing;
 
@@ -31,7 +32,7 @@ public partial class PriceRuleVm : System.ComponentModel.INotifyPropertyChanged
     public string CachePer1M { get => _cache; set => Set(ref _cache, value, nameof(CachePer1M)); }
     public string OutputPer1M { get => _output; set => Set(ref _output, value, nameof(OutputPer1M)); }
 
-    public List<int>? Days
+    public IReadOnlyList<int>? Days
     {
         get
         {
@@ -51,11 +52,14 @@ public partial class PriceRuleVm : System.ComponentModel.INotifyPropertyChanged
 
 /// <summary>
 /// 对话框 2：计价配置（01-§3-D8）。
-/// 模型 + 货币(CNY/USD) + 生效日期；规则卡 = 时段行(0.5h) + 星期 chips + 三单价 + 删除；
-/// 版本条「当前 V{n} 生效中 → 保存追加 V{n+1}」；底部说明（跨午夜平移 + 自动备份）。
+/// 模型 + 货币(CNY/USD) + 生效日期；规则卡 = 时段行(0.5h，时间下拉) + 星期 chips + 三单价 + 删除；
+/// 版本条「当前 V{n} 生效中 → 保存…」；底部说明（跨午夜平移 + 自动备份）。
+/// 打开（或切换模型）时载入该模型链尾版本的规则，保存后再次进入即看到已保存内容。
 /// </summary>
 public partial class PricingConfigDialog : ShellDialog
 {
+    private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
+
     private readonly AppServices _svc;
     public ObservableCollection<string> Models { get; } = new();
     public ObservableCollection<PriceRuleVm> Rules { get; } = new();
@@ -64,9 +68,20 @@ public partial class PricingConfigDialog : ShellDialog
     private string _effectiveFrom = DateTime.Today.ToString("yyyy-MM-dd");
     private string? _versionBar;
     private string _currency = "CNY";
+    private bool _loading;
 
-    public string ChosenModel { get => _chosenModel; set { if (Set(ref _chosenModel, value)) RefreshVersionBar(); } }
-    public string EffectiveFrom { get => _effectiveFrom; set { if (Set(ref _effectiveFrom, value, nameof(EffectiveFrom))) RefreshVersionBar(); } }
+    /// <summary>时段编辑基准（生效日期口径）：local → 编辑区按本地时间，保存换算为 UTC 存储。</summary>
+    public string BasisHint => TimeBasis.Hint(BasisMode, BasisOffset);
+
+    private string BasisMode => _svc.Engine.Pricing.EffectiveContext.Mode;
+    private int BasisOffset => _svc.Engine.Config.Settings.OffsetMin;
+
+    public string ChosenModel
+    {
+        get => _chosenModel;
+        set { if (Set(ref _chosenModel, value)) { LoadModel(value); RefreshVersionBar(); } }
+    }
+    public string EffectiveFrom { get => _effectiveFrom; set { if (Set(ref _effectiveFrom, value)) RefreshVersionBar(); } }
     public string? VersionBar { get => _versionBar; set => Set(ref _versionBar, value, nameof(VersionBar)); }
 
     public RelayCommand AddRuleCommand { get; }
@@ -86,10 +101,9 @@ public partial class PricingConfigDialog : ShellDialog
         });
         InitializeComponent();
 
-        var names = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var k in _svc.Engine.Pricing.Document.Pricing.Keys) names.Add(k);
-        if (_svc.Main is not null)
-            foreach (var c in _svc.Main.Cards) names.Add(c.Model);
+        var names = ModelKeyOptions.Build(
+            _svc.Engine.Pricing.Document.Pricing.Keys,
+            _svc.Main?.Cards.Select(c => c.Key) ?? []);
         foreach (var n in names) Models.Add(n);
 
         CurrencyBox.Items.Add("CNY ¥");
@@ -120,20 +134,66 @@ public partial class PricingConfigDialog : ShellDialog
     private void Currency_Changed(object sender, SelectionChangedEventArgs e)
     {
         _currency = CurrencyBox.SelectedIndex == 1 ? "USD" : "CNY";
+        if (!_loading) RefreshVersionBar();
     }
+
+    /// <summary>载入该模型链尾版本（最近保存 = 当前生效）的货币、生效日期与规则卡。
+    /// 该模型尚无规范键配置时回退到同名遗留裸键（旧版剥离前缀写入），使旧配置可见并在保存时改写到规范键。</summary>
+    private void LoadModel(string? modelKey)
+    {
+        Rules.Clear();
+        var cfg = ModelKeyOptions.Resolve(modelKey, _svc.Engine.Pricing.Document.Pricing);
+        if (cfg is { History.Count: > 0 })
+        {
+            var last = cfg.History[^1];
+            _loading = true;
+            try { CurrencyBox.SelectedIndex = string.Equals(last.Currency, "USD", StringComparison.OrdinalIgnoreCase) ? 1 : 0; }
+            finally { _loading = false; }
+            _currency = last.Currency;
+            EffectiveFrom = last.EffectiveFrom ?? "";
+            var idx = 0;
+            // 存量恒为 UTC；local 口径下换算成本地时钟显示（原前端 tzShift.js 的职责，02-§4.5）
+            foreach (var rule in TimeBasis.ToDisplay(last.Rules, BasisMode, BasisOffset))
+            {
+                var vm = new PriceRuleVm { Title = $"规则{++idx}" };
+                vm.Days = rule.Days;
+                vm.InputPer1M = Num(rule.InputPer1M);
+                vm.CachePer1M = Num(rule.CachePer1M);
+                vm.OutputPer1M = Num(rule.OutputPer1M);
+                vm.Periods.Add(new PeriodRowVm
+                {
+                    Start = Fmt.HourLabel(rule.Start),
+                    End = Fmt.HourLabel(rule.End),
+                });
+                Rules.Add(vm);
+            }
+        }
+        if (Rules.Count == 0) AddRule();   // 无历史版本 / 规则为空 → 默认空白规则卡
+    }
+
+    private static string Num(double v) => v.ToString("0.####", Inv);
 
     private void RefreshVersionBar()
     {
         var doc = _svc.Engine.Pricing.Document;
         var (mode, _) = _svc.Engine.Pricing.EffectiveContext;
-        if (string.IsNullOrEmpty(ChosenModel) || !doc.Pricing.TryGetValue(ChosenModel, out var cfg) || cfg.History.Count == 0)
+        var cfg = ModelKeyOptions.Resolve(ChosenModel, doc.Pricing);
+        var legacy = cfg is not null && !doc.Pricing.ContainsKey(ChosenModel)
+            ? " · 读自遗留键（保存将写入 " + ChosenModel + "）" : "";
+        if (string.IsNullOrEmpty(ChosenModel) || cfg is not { History.Count: > 0 })
         {
-            VersionBar = $"当前无版本 → 保存将创建 V1 · 基准 {mode.ToUpperInvariant()}";
+            VersionBar = $"当前无版本 → 保存将创建 V1 · 基准 {mode.ToUpperInvariant()} · 货币 {_currency}{legacy}";
             return;
         }
         var last = cfg.History[^1];
-        VersionBar = $"V{cfg.History.Count} 生效中 · {last.EffectiveFrom ?? "一直生效"} → 保存追加 V{cfg.History.Count + 1}" +
-                     $" · 基准 {mode.ToUpperInvariant()} · 货币 {_currency}";
+        var savedEff = last.EffectiveFrom ?? "";
+        var curEff = EffectiveFrom.Trim();
+        var action = string.Equals(savedEff, curEff, StringComparison.Ordinal)
+            ? $"保存覆盖 V{cfg.History.Count}"
+            : $"保存追加 V{cfg.History.Count + 1}";
+        VersionBar = $"V{cfg.History.Count} 生效中 · {(savedEff.Length == 0 ? "一直生效" : savedEff)}" +
+                     (curEff.Length == 0 ? "" : $" · 生效日期 {curEff}") + " → " + action +
+                     $" · 基准 {mode.ToUpperInvariant()} · 货币 {_currency}{legacy}";
     }
 
     private bool Save()
@@ -149,7 +209,6 @@ public partial class PricingConfigDialog : ShellDialog
         foreach (var r in Rules)
         {
             if (r.Periods.Count == 0) return Fail($"「{r.Title}」至少需要一条时段行");
-            double? prevEnd = null;
             foreach (var p in r.Periods)
             {
                 var s = p.StartHour;
@@ -160,16 +219,22 @@ public partial class PricingConfigDialog : ShellDialog
                     Parse(r.InputPer1M, $"{r.Title} input_per_1m") ?? -1,
                     Parse(r.CachePer1M, $"{r.Title} cache_per_1m") ?? -1,
                     Parse(r.OutputPer1M, $"{r.Title} output_per_1m") ?? -1));
-                prevEnd = e;
             }
         }
         if (rules.Any(r => r.InputPer1M < 0 || r.CachePer1M < 0 || r.OutputPer1M < 0)) return false;
 
+        // 编辑区（local 口径下为本地时间）→ UTC 存储；跨午夜拆分与星期平移由 PricingShift 负责
+        var stored = TimeBasis.ToStorage(rules, BasisMode, BasisOffset);
+
         try
         {
-            _svc.Engine.Pricing.UpdatePricingVersion(ChosenModel, eff, _currency, rules);
-            Core.SysUtil.Logger.Info("App", $"pricing saved: {ChosenModel} eff={eff ?? "-"} currency={_currency} rules={rules.Count}");
+            _svc.Engine.Pricing.UpdatePricingVersion(ChosenModel, eff, _currency, stored);
+            Core.SysUtil.Logger.Info("App", $"pricing saved: {ChosenModel} eff={eff ?? "-"} currency={_currency} rules={stored.Count} basis={BasisMode}");
             _svc.Tray?.ShowBalloon("计价配置", $"{ChosenModel} 已保存并生效");
+            // 键没有对应卡片 → 保存不会体现为界面上的金额变化，明确告知（避免"保存了但不生效"的错觉）；
+            // 必须指定 owner，否则置顶对话框会把这个 MessageBox 压在后面（同 CardVisibilityDialog 教训）
+            var warn = ModelKeyOptions.NoCardWarning(ChosenModel, _svc.Main?.Cards.Select(c => c.Key) ?? []);
+            if (warn is not null) MessageBox.Show(this, warn, "计价配置", MessageBoxButton.OK, MessageBoxImage.Warning);
             return true;
         }
         catch (Exception ex)

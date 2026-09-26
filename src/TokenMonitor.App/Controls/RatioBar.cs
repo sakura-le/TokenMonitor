@@ -9,7 +9,8 @@ public enum RatioKind { Hit, Miss, Output }
 
 /// <summary>
 /// C-04 RatioBar —— H 缓存命中 / M 未命中 / O 输出 占比条（03-ui-spec §3.3）。
-/// Grid 3 列 32|*|40；Track 高 6-7、CornerRadius={Tg.Radius.Bar}、ClipToBounds；
+/// Grid 4 列 34|150|Auto|*（条定宽、数量文本紧随其后，末列仅占位）；
+/// Track 高 6-7、CornerRadius={Tg.Radius.Bar}、ClipToBounds；
 /// Fill 宽度 = 轨道宽 × Ratio（MultiplyConverter）；S2/S4 轨道刻纹由 Tg.Texture.Bars 提供。
 /// </summary>
 [TemplatePart(Name = PartTrack, Type = typeof(FrameworkElement))]

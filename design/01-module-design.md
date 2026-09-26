@@ -993,13 +993,18 @@ ON CONFLICT(date,provider,model) DO UPDATE SET
 
 ### 7.2 退出序列（ITokenMonitorEngine.StopAsync；托盘"退出"/系统关机/致命异常共用）
 
+> 线程约束（实测回归）：整个停止序列**不得在带 SynchronizationContext 的线程上同步等待**。
+> ASP.NET Core 主机的 StopAsync 内部 await 默认捕获上下文；在 WPF UI 线程阻塞 GetResult()
+> 会让续体排进被阻塞的派发队列 → 互锁，表现为"托盘退出后进程只能任务管理器结束"。
+> 实现：App 在后台线程跑 StopAsync，完成后再回 UI 线程 Shutdown（ProxyEngine.StopHostQuiet 同样脱上下文）。
+
 1. 停 StatsTicker 与 DayWatch（先断 UI 数据流）。
 2. `IProxyEngine.Stop(gracefulTimeout: 10s)` [S5]：停止接受新连接 → 等待 InFlightCaptures 归零或超时 → 取消捕获 CTS（在途 SSE 续读任务随 30 分钟上限 CTS 链接一起中止）→ HttpListener.Stop/Abort。
 3. `store.Flush()` → `store.CheckpointWal()`。
 4. 保存 ui_state（强制落盘防抖队列）与 settings（如有脏）。
 5. 托盘 Dispose（移除图标）→ 关闭悬浮球/面板窗口。
 6. `store.Dispose()`（关连接）→ 释放 Mutex/EventWaitHandle。
-7. 若 3s 内托管线程未自然结束 → `Environment.Exit(0)` 兜底（先记日志）。
+7. 兜底：退出流程 20s 未结束 → 记日志后 `Environment.Exit(0)`（正常路径 <1s 自然退出，计时随进程消失）。
 
 ### 7.3 异常兜底
 

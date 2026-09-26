@@ -12,6 +12,8 @@
         <!-- ============ 收起态 Ø68（窗口恒高 68，球体贴右缘——展开时向左生长） ============ -->
         <Grid x:Name="BallFace" Width="68" Height="68" Visibility="Visible"
               HorizontalAlignment="Right" VerticalAlignment="Top">
+            <!-- 底盘：不参与按压缩放。球体 Ø68 正好铺满 68px 窗口，
+                 整盘放大 1.06 会画到窗口外被裁掉一圈（用户反馈"按住时圆被切掉边线"） -->
             <Ellipse Fill="{DynamicResource Tg.Bg.Card}"/>
             <!-- S4 云白渐变底盘（IsSkySkin 时叠加） -->
             <Ellipse Visibility="{Binding IsSkySkin, Source={x:Static infra:SkinFlags.Instance}, Converter={StaticResource BoolVis}}">
@@ -22,27 +24,33 @@
                     </RadialGradientBrush>
                 </Ellipse.Fill>
             </Ellipse>
-            <!-- S4 雷达扫描扇 -->
-            <Grid Visibility="{Binding IsRadarSkin, Source={x:Static infra:SkinFlags.Instance}, Converter={StaticResource BoolVis}}">
-                <Ellipse Width="54" Height="54" Stroke="#1E10304F" StrokeThickness="1"/>
-                <Path Fill="{DynamicResource Tg.Ring.Stroke}" Opacity="0.22"
-                      Data="M 34 34 L 34 7 A 27 27 0 0 1 53.09 14.91 Z">
-                    <Path.RenderTransform>
-                        <RotateTransform x:Name="ballRadar" CenterX="34" CenterY="34" Angle="0"/>
-                    </Path.RenderTransform>
-                </Path>
+            <!-- 按压缩放组：命中弧 / 雷达 / 数字都在盘内（r≤32 → ×1.06 后 33.9 < 34，仍在线内） -->
+            <Grid x:Name="BallInner" RenderTransformOrigin="0.5,0.5">
+                <Grid.RenderTransform>
+                    <ScaleTransform x:Name="BallInnerScale" ScaleX="1" ScaleY="1"/>
+                </Grid.RenderTransform>
+                <!-- S4 雷达扫描扇 -->
+                <Grid Visibility="{Binding IsRadarSkin, Source={x:Static infra:SkinFlags.Instance}, Converter={StaticResource BoolVis}}">
+                    <Ellipse Width="54" Height="54" Stroke="#1E10304F" StrokeThickness="1"/>
+                    <Path Fill="{DynamicResource Tg.Ring.Stroke}" Opacity="0.22"
+                          Data="M 34 34 L 34 7 A 27 27 0 0 1 53.09 14.91 Z">
+                        <Path.RenderTransform>
+                            <RotateTransform x:Name="ballRadar" CenterX="34" CenterY="34" Angle="0"/>
+                        </Path.RenderTransform>
+                    </Path>
+                </Grid>
+                <!-- 命中弧（起点朝上） -->
+                <Path x:Name="HitArc" Stroke="{DynamicResource Tg.Ring.Stroke}" StrokeThickness="4"
+                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding BallTotal}" FontFamily="{DynamicResource Tg.Font.Num}"
+                               Typography.NumeralAlignment="Tabular" FontSize="13.5" FontWeight="Bold"
+                               Foreground="{DynamicResource Tg.Ink.Primary}" TextAlignment="Center"/>
+                    <TextBlock Text="{Binding BallDelta}" FontFamily="{DynamicResource Tg.Font.Num}"
+                               FontSize="8.5" Foreground="{DynamicResource Tg.State.Ok}" TextAlignment="Center"
+                               Margin="0,2,0,0"/>
+                </StackPanel>
             </Grid>
-            <!-- 命中弧（起点朝上） -->
-            <Path x:Name="HitArc" Stroke="{DynamicResource Tg.Ring.Stroke}" StrokeThickness="4"
-                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
-            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                <TextBlock Text="{Binding BallTotal}" FontFamily="{DynamicResource Tg.Font.Num}"
-                           Typography.NumeralAlignment="Tabular" FontSize="13.5" FontWeight="Bold"
-                           Foreground="{DynamicResource Tg.Ink.Primary}" TextAlignment="Center"/>
-                <TextBlock Text="{Binding BallDelta}" FontFamily="{DynamicResource Tg.Font.Num}"
-                           FontSize="8.5" Foreground="{DynamicResource Tg.State.Ok}" TextAlignment="Center"
-                           Margin="0,2,0,0"/>
-            </StackPanel>
         </Grid>
 
         <!-- ============ 展开态 470×56 胶囊（垂直居中于恒高 68 窗口） ============ -->

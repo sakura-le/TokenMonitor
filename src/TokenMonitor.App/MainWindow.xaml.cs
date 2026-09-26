@@ -13,8 +13,8 @@ namespace TokenMonitor.App;
 
 /// <summary>
 /// 主面板窗口壳：chrome/拖拽类不可避免的少量后台代码。
-/// 窗口矩形/透明度记忆、漏抓横幅显隐动画、卡片入场错峰动画、F5/F2 快捷键、
-/// 3 列自适应（宽 >900）、选中卡联动侧栏。
+/// 窗口位置/透明度记忆（尺寸固定 760×560，不可缩放）、漏抓横幅显隐动画、卡片入场错峰动画、
+/// F5/F2 快捷键、置顶样式重推、选中卡联动侧栏。
 /// </summary>
 public partial class MainWindow : Window
 {
@@ -30,7 +30,9 @@ public partial class MainWindow : Window
         Closing += (_, _) => _svc.UiState.SavePanel(this, _vm);
         LocationChanged += (_, _) => { _saveTimer.Stop(); _saveTimer.Start(); };
         SizeChanged += (_, _) => { _saveTimer.Stop(); _saveTimer.Start(); };
-        // 3 列自适应（§1.2：窗口宽 >900 时 3 列）
+        // 固定尺寸：标题栏双击会经 DefWindowProc 走 SC_MAXIMIZE（ResizeMode=NoResize 不拦它），
+        // 这里直接退回 Normal。MaxWidth/MaxHeight = 基准尺寸已兜住"被拉大"，此处只负责免得窗口跳位。
+        StateChanged += (_, _) => { if (WindowState != WindowState.Normal) WindowState = WindowState.Normal; };
         PreviewKeyDown += OnPreviewKeyDown;
         _saveTimer.Interval = TimeSpan.FromMilliseconds(600);
         _saveTimer.Tick += (_, _) => { _saveTimer.Stop(); _svc.UiState.SavePanel(this, _vm); };
@@ -80,6 +82,21 @@ public partial class MainWindow : Window
         };
 
         PlayCardEntrance();
+
+        // 置顶重推：Show() 之后立刻赋 Topmost 实测不生效（分层窗口在该时机设置会与
+        // WS_EX_TOPMOST 的样式应用竞态，表现为"按钮显示已置顶但窗口不是置顶"），
+        // 故等窗口真正 Loaded 后再落实一次；悬浮球一直是这么做的（OnLoaded 里设置）所以没这问题。
+        Dispatcher.BeginInvoke(new Action(() => ApplyTopmost(Vm.IsTopmost)), DispatcherPriority.Loaded);
+    }
+
+    /// <summary>
+    /// 把置顶意图真正落到窗口样式。值相同也要制造一次属性变更：WPF 只在属性**变化**时
+    /// 下发 WS_EX_TOPMOST，否则"属性已是 true 但 HWND 未置顶"的状态会一直保持。
+    /// </summary>
+    public void ApplyTopmost(bool want)
+    {
+        if (Topmost == want) Topmost = !want;
+        Topmost = want;
     }
 
     /// <summary>显示/隐藏（收起到球 ↔ 恢复）。</summary>
@@ -100,7 +117,7 @@ public partial class MainWindow : Window
         if (IsVisible)
         {
             Activate();
-            Topmost = _vm?.IsTopmost ?? true;
+            ApplyTopmost(_vm?.IsTopmost ?? true);
             return;
         }
         try
@@ -122,6 +139,7 @@ public partial class MainWindow : Window
         fade.Completed += (_, _) => BeginAnimation(OpacityProperty, null);
         BeginAnimation(OpacityProperty, fade);
         Activate();
+        ApplyTopmost(_vm?.IsTopmost ?? true);   // Hide/Show 往返后同样要重推（同 OnLoaded 的竞态）
     }
 
     private static IEasingFunction Ease() => new CircleEase { EasingMode = EasingMode.EaseOut };
@@ -177,6 +195,11 @@ public partial class MainWindow : Window
             Vm!.SelectCardCommand.Execute(card);   // 右键即选中（菜单动作针对该卡）
     }
 
+    /// <summary>
+    /// 卡片任意位置（含"设置"按钮等子控件上下）都选中该卡。用 Preview（隧道）而非冒泡：
+    /// 子控件（Button/RadioButton/ToggleButton）会把冒泡事件标记 Handled，此前这些区域点不动。
+    /// 不设 e.Handled → 子控件自身的点击动作照常执行。
+    /// </summary>
     private void Card_MouseLeftButton(object sender, MouseButtonEventArgs e)
     {
         if (sender is FrameworkElement { DataContext: CardViewModel card })
@@ -216,10 +239,14 @@ internal static class ContextMenuExtensions
         var menu = new ContextMenu();
         var vm = AppServices.Instance.Main;
         if (vm is null) return;
+        var m0 = new MenuItem { Header = "设置…", Command = vm.OpenSettingsCommand };
         var m1 = new MenuItem { Header = "显示隐藏卡片…", Command = vm.OpenCardVisibilityCommand };
         var m2 = new MenuItem { Header = "操作日志（全部）", Command = vm.OpenOpLogsCommand, CommandParameter = null };
+        m0.SetResourceReference(FrameworkElement.StyleProperty, "Tg.MenuItem");
         m1.SetResourceReference(FrameworkElement.StyleProperty, "Tg.MenuItem");
         m2.SetResourceReference(FrameworkElement.StyleProperty, "Tg.MenuItem");
+        menu.Items.Add(m0);
+        menu.Items.Add(new Separator { Style = (Style)Application.Current.FindResource("Tg.MenuSeparator") });
         menu.Items.Add(m1);
         menu.Items.Add(m2);
         menu.PlacementTarget = fe;

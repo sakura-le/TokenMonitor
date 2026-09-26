@@ -45,6 +45,9 @@ public sealed class AppServices
         var win = PanelWindow;
         if (win is null) return;
         win.RestoreFromBall();
+        // 面板与球是互斥形态（球 = "收起到球"后的静息态）：面板回来时收起球，
+        // 否则双击球回面板后球一直浮在面板上（退出前实测：两窗口同时在屏）。
+        BallWindow?.Hide();
     }
 
     /// <summary>收起到球。</summary>

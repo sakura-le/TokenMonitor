@@ -108,8 +108,12 @@ public partial class CardViewModel : ObservableObject
 
     [ObservableProperty] private bool _isStale;   // 范围查询中
 
-    /// <summary>口径点文案：显示目标口径（与样例交互一致）。</summary>
-    public string DotText => IsUtc ? "LOCAL" : "UTC";
+    /// <summary>
+    /// 口径点文案 = **当前**口径（与详情侧栏 ScopeTag 一致）。
+    /// 原实现显示"目标口径"（IsUtc ? LOCAL : UTC），与侧栏/数据的当前口径相反，
+    /// 看起来就像侧栏标反了；点击动作由按钮 ToolTip 说明。
+    /// </summary>
+    public string DotText => IsUtc ? "UTC" : "LOCAL";
 
     public RelayCommand ToggleCaliberCommand { get; }
     public RelayCommand SetActualViewCommand { get; }
@@ -235,15 +239,16 @@ public partial class CardViewModel : ObservableObject
         RenderRatios(total, hit, miss, comp);
     }
 
+    /// <summary>三条比例条的文案 = 各部分的具体 token 数（占比由条长表达，不再重复百分比）。</summary>
     private void RenderRatios(long total, long hit, long miss, long comp)
     {
         var t = Math.Max(1, total);
         RatioH = (double)hit / t;
         RatioM = (double)miss / t;
         RatioO = (double)comp / t;
-        RatioHText = Fmt.Pct(RatioH);
-        RatioMText = Fmt.Pct(RatioM);
-        RatioOText = Fmt.Pct(RatioO);
+        RatioHText = Fmt.N0(hit);
+        RatioMText = Fmt.N0(miss);
+        RatioOText = Fmt.N0(comp);
     }
 
     /// <summary>范围查询（异步；回包校验 [C16]：卡片键 + 发起序号 + 范围仍一致）。</summary>
