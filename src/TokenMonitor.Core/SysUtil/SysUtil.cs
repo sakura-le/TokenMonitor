@@ -56,8 +56,10 @@ public sealed class SysUtil : ISysUtil
         }
         try
         {
-            var exe = System.Reflection.Assembly.GetEntryAssembly()?.Location;
-            var dir = string.IsNullOrEmpty(exe) ? Environment.CurrentDirectory : Path.GetDirectoryName(exe)!;
+            // AppContext.BaseDirectory：常规与单文件（self-contained single-file）发布下都指向 exe 所在目录；
+            // Assembly.Location 在单文件发布返回空串（此前会退回 CurrentDirectory\data，取决于启动方式，不可靠）
+            var dir = AppContext.BaseDirectory;
+            if (string.IsNullOrWhiteSpace(dir)) dir = Environment.CurrentDirectory;
             DataDir = Path.Combine(dir, "data");
         }
         catch

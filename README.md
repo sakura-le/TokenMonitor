@@ -15,6 +15,17 @@ Windows 桌面常驻工具：代理并监控本机 LLM API 流量的 **Token 用
 | 运行时依赖 | WebView2 + .NET Desktop Runtime | 仅 .NET Desktop Runtime 10 |
 | UI | Vue+WebView2 面板 / WPF 球分离 | 全 XAML：主面板 + 托盘 + 悬浮球同进程 |
 
+## 下载
+
+直接从 [Releases](https://github.com/sakura-le/TokenMonitor/releases/latest) 获取：
+
+| 压缩包 | 适用 | 大小 |
+|---|---|---|
+| `TokenMonitor-v1.0.0-win-x64-selfcontained.zip` | **解压即用**，无需安装任何运行时 | ~83 MB |
+| `TokenMonitor-v1.0.0-win-x64.zip` | 体积小，需先安装 [.NET Desktop Runtime 10](https://dotnet.microsoft.com/download/dotnet/10.0) | ~1.8 MB |
+
+解压到任意目录，运行 `TokenMonitor.App.exe`（`data/` 生成在 exe 旁，发布升级不会覆盖数据）。
+
 ## 截图
 
 > 以下截图均为**演示数据**（合成用量与 `sk-demo-*` 占位密钥），不含任何真实用量或密钥。
