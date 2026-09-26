@@ -15,3 +15,8 @@ data/
 Thumbs.db
 desktop.ini
 publish/
+
+# 验证/演示用产物
+verify-bin10/
+publish-demo/
+*.log
