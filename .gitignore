@@ -20,3 +20,4 @@ publish/
 verify-bin10/
 publish-demo/
 *.log
+.tools-gh/
