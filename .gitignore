@@ -21,3 +21,5 @@ verify-bin10/
 publish-demo/
 *.log
 .tools-gh/
+publish-sc/
+.release/
