@@ -35,7 +35,13 @@ public partial class MainViewModel : ObservableObject
         ToggleTopmostCommand = new RelayCommand<bool>(v => IsTopmost = v);
         CollapseCommand = new RelayCommand(() => svc.CollapseToBall());
         BannerGoCommand = new RelayCommand(() => svc.Dialogs.ShowManualCalibrate());
-        BannerCloseCommand = new RelayCommand(() => Banner.Visible = false);
+        BannerCloseCommand = new RelayCommand(() =>
+        {
+            // 必须同时置 UserClosed：ApplySnapshot 每 200ms 跑一次，MissedCaptures 仍 >0 时
+            // 只设 Visible=false 会被下一次快照立即弹回（表现为"❌ 点了没反应"）
+            Banner.UserClosed = true;
+            Banner.Visible = false;
+        });
         OpenMultiplierCommand = new RelayCommand<string?>(m => svc.Dialogs.ShowMultiplierConfig(m));
         OpenPricingCommand = new RelayCommand<string?>(m => svc.Dialogs.ShowPricingConfig(m));
         OpenCalibrateCommand = new RelayCommand<string?>(m => svc.Dialogs.ShowManualCalibrate(m));
@@ -212,10 +218,12 @@ public partial class MainViewModel : ObservableObject
                 snap.MissedCaptures);
         }
 
-        // 漏抓横幅（§1.6）
+        // 漏抓横幅（§1.6）：❌ 关闭后不再打扰；但新增漏抓（计数上涨）是新信息，重新出现；
+        // 计数归零（本地日窗口滚走/补录）时复位关闭标记，让下一次漏抓仍能提示
+        if (snap.MissedCaptures > Banner.Count) Banner.UserClosed = false;
         Banner.Count = snap.MissedCaptures;
         if (snap.MissedCaptures > 0 && !Banner.UserClosed) Banner.Visible = true;
-        else if (snap.MissedCaptures == 0) Banner.Visible = false;
+        else if (snap.MissedCaptures == 0) { Banner.Visible = false; Banner.UserClosed = false; }
 
         // 口径徽章（默认 LOCAL）
         CaliberBadgeText = _svc.Engine.Config.Settings.EffectiveDateMode == "utc" ? "UTC" : "LOCAL";
