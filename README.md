@@ -21,8 +21,8 @@ Windows 桌面常驻工具：代理并监控本机 LLM API 流量的 **Token 用
 
 | 压缩包 | 适用 | 大小 |
 |---|---|---|
-| `TokenMonitor-v1.0.0-win-x64-selfcontained.zip` | **解压即用**，无需安装任何运行时 | ~83 MB |
-| `TokenMonitor-v1.0.0-win-x64.zip` | 体积小，需先安装 [.NET Desktop Runtime 10](https://dotnet.microsoft.com/download/dotnet/10.0) | ~1.8 MB |
+| `TokenMonitor-v1.0.1-win-x64-selfcontained.zip` | **解压即用**，无需安装任何运行时 | ~83 MB |
+| `TokenMonitor-v1.0.1-win-x64.zip` | 体积小，需先安装 [.NET Desktop Runtime 10](https://dotnet.microsoft.com/download/dotnet/10.0) | ~1.8 MB |
 
 解压到任意目录，运行 `TokenMonitor.App.exe`（`data/` 生成在 exe 旁，发布升级不会覆盖数据）。
 
