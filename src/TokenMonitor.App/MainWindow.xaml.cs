@@ -60,13 +60,16 @@ public partial class MainWindow : Window
         };
 
         // 侧栏折线数据同步（Points 是 IReadOnlyList，代码侧同步）
+        // ChartVersion = 入场动画重放（切卡/手动刷新）；LiveVersion = 200ms 今日点原地更新（静默重绘）
         _vm.Side.PropertyChanged += (_, e2) =>
         {
-            if (e2.PropertyName is nameof(SideDetailViewModel.ChartVersion) or nameof(SideDetailViewModel.Chart))
+            if (e2.PropertyName is nameof(SideDetailViewModel.ChartVersion)
+                or nameof(SideDetailViewModel.LiveVersion)
+                or nameof(SideDetailViewModel.Chart))
             {
                 Trend.Points = _vm.Side.ChartValues;
                 Trend.Labels = _vm.Side.ChartLabels;
-                Trend.PlayEntrance();
+                if (e2.PropertyName is nameof(SideDetailViewModel.ChartVersion)) Trend.PlayEntrance();
             }
         };
         Trend.Points = _vm.Side.ChartValues;

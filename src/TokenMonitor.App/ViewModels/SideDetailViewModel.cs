@@ -14,7 +14,9 @@ public sealed record ChartPoint(string Label, double Value);
 /// <summary>
 /// 详情侧栏（选中卡；D5）。命中率环 / Stat4 / 近7日折线（倍率模式画 mul_total）/
 /// 成本条 A·B 双态 / 由 MainViewModel 每秒喂入双钟文本。
-/// 7 日折线缓存键含 (模型, 口径, 倍率)；ConfigChanged/DayRolledOver 失效 [C17]。
+/// 折线取数规则（用户定稿）：**前 6 天走 DB 查询（当天内不变量，事件失效 [C17]），
+/// “今日点”与卡片同源——直接取实时快照（200ms 面板路径原地改点，无动画、无 DB 轮询）**；
+/// 入场动画仅在切换卡片或手动“刷新数据”时重放；DayRolledOver/ConfigChanged 触发强制重查（无动画）。
 /// </summary>
 public partial class SideDetailViewModel : ObservableObject
 {
@@ -58,11 +60,12 @@ public partial class SideDetailViewModel : ObservableObject
             HeadText = "详情";
             return;
         }
-        HeadText = card.Model + " 详情";
+        Chart.Clear();                     // 换卡：清空旧卡点位，新查询落地前 live 更新自动跳过
+        ForceChartRefresh(withEntrance: true);  // 切换卡片 = 入场动画的触发点之一
         Render();
     }
 
-    /// <summary>卡片显示模式变化后重渲（由 MainViewModel 调用）。</summary>
+    /// <summary>卡片显示模式变化后重渲（由 MainViewModel 调用）。折线只做“今日点”的实时更新。</summary>
     public void Render()
     {
         var card = _card;
@@ -89,54 +92,31 @@ public partial class SideDetailViewModel : ObservableObject
         CostCnyText = "¥" + Fmt.Money(s.Cny);
         CostUsdText = "$" + Fmt.Money(s.Usd);
 
-        BeginChartQuery(card);
+        UpdateLiveTodayPoint(card); // 200ms 实时路径：只改“今日点”，不查库、不触发动画
     }
 
-    private string _lastChartSig = "";
-    private DateTime _lastChartQueryAt = DateTime.MinValue;
-
-    /// <summary>近 7 日折线查询（异步回包校验发起键 [C16]）。
-    /// 节流：同签名 15 秒内不重查——此前挂在 200ms 快照路径上每秒 5 次清空重填集合
-    /// 并重放入场动画，造成折线图频烁。</summary>
-    private void BeginChartQuery(CardViewModel card)
+    /// <summary>强制重查近 7 日（跳过节流）：切卡/手动“刷新数据”（withEntrance=true，重放入场动画），
+    /// DayRolledOver/ConfigChanged（false，跨零点重排日期与改价重算历史，静默落地）。
+    /// DB 只负责前 6 天；“今日槽”落地时以实时快照覆盖——当日点的唯一权威来源是内存快照。</summary>
+    public void ForceChartRefresh(bool withEntrance)
     {
-        var sig = $"{card.Key}|{card.IsUtc}|{card.MultiplierView}";
-        if (sig == _lastChartSig && (DateTime.UtcNow - _lastChartQueryAt).TotalSeconds < 15) return;
-        _lastChartSig = sig;
-        _lastChartQueryAt = DateTime.UtcNow;
+        var card = _card;
+        if (card is null) return;
+        _entrancePending = withEntrance;
         var gen = ++_chartGeneration;
         var scope = card.IsUtc ? BucketScope.Utc : BucketScope.Local;
         var key = $"{card.Key}|{scope}|{card.MultiplierView}|{gen}";
         _pendingChartKey = key;
         var mul = card.MultiplierView;
         var modelKey = card.Key;
+        var offset = _svc.Engine.Config.Settings.OffsetMin;
 
         Task.Run(() =>
         {
             try
             {
                 var res = _svc.Engine.Queries.GetRecentDays(7, scope);
-                var pts = new List<ChartPoint>();
-                var byDate = res.Rows.GroupBy(r => r.Date).OrderBy(g => g.Key);
-                // 恰好 7 个日历日 [C7]：右侧对齐今天的 7 天
-                var dates = Enumerable.Range(0, 7).Select(i =>
-                    DateTime.UtcNow.AddDays(-(6 - i)).ToString("yyyy-MM-dd")).ToList();
-                if (scope == BucketScope.Local)
-                    dates = Enumerable.Range(0, 7).Select(i =>
-                        DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromMinutes(_svc.Engine.Config.Settings.OffsetMin))
-                            .AddDays(-(6 - i)).ToString("yyyy-MM-dd")).ToList();
-                foreach (var d in dates)
-                {
-                    var g = byDate.FirstOrDefault(x => x.Key == d);
-                    long sum = 0;
-                    if (g is not null)
-                        foreach (var r in g)
-                        {
-                            if ((r.Provider + "/" + r.Model) != modelKey) continue;
-                            sum += mul ? r.MulTotal : r.TotalTokens;
-                        }
-                    pts.Add(new ChartPoint(d[5..], sum));
-                }
+                var pts = BuildSevenPoints(res, scope, offset, mul, modelKey);
                 return (Key0: key, Gen: gen, Pts: pts);
             }
             catch (Exception ex)
@@ -147,27 +127,100 @@ public partial class SideDetailViewModel : ObservableObject
         }).ContinueWith(t =>
         {
             if (t.Result.Gen != _chartGeneration || t.Result.Key0 != _pendingChartKey) return;
-            var pts = t.Result.Pts;
-            // 数据去重：与现有内容一致则不清空重填（避免无意义重绘/动画重放）
-            if (Chart.Count == pts.Count)
-            {
-                var same = true;
-                for (var i = 0; i < pts.Count; i++)
-                    if (Chart[i].Label != pts[i].Label || Math.Abs(Chart[i].Value - pts[i].Value) > 0.5) { same = false; break; }
-                if (same) return;
-            }
             Application.Current?.Dispatcher.BeginInvoke(() =>
             {
-                Chart.Clear();
-                foreach (var p in pts) Chart.Add(p);
-                ChartVersion++;
-                OnPropertyChanged(nameof(Chart));
+                var card0 = _card;
+                if (card0 is null) return;
+                var pts = t.Result.Pts;
+                if (pts.Count == 7) // 今日槽以快照覆盖：DB 对当日天然滞后（缓存/刷写窗口）
+                    pts[^1] = pts[^1] with { Label = TodayLabel(card0), Value = LiveTodayValue(card0) };
+                ApplyPts(pts, entrance: _entrancePending);
             });
         }, TaskScheduler.Default);
     }
 
-    /// <summary>折线数据版本（MainViewModel 在 DayRolledOver/ConfigChanged 后 ++ 并触发重查）。</summary>
+    private List<ChartPoint> BuildSevenPoints(TokenMonitor.Core.Stats.RecentDaysResult res,
+        BucketScope scope, int offset, bool mul, string modelKey)
+    {
+        var pts = new List<ChartPoint>();
+        var byDate = res.Rows.GroupBy(r => r.Date).OrderBy(g => g.Key);
+        // 恰好 7 个日历日 [C7]：右侧对齐今天的 7 天
+        var dates = Enumerable.Range(0, 7).Select(i =>
+            DateTime.UtcNow.AddDays(-(6 - i)).ToString("yyyy-MM-dd")).ToList();
+        if (scope == BucketScope.Local)
+            dates = Enumerable.Range(0, 7).Select(i =>
+                DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromMinutes(offset))
+                    .AddDays(-(6 - i)).ToString("yyyy-MM-dd")).ToList();
+        foreach (var d in dates)
+        {
+            var g = byDate.FirstOrDefault(x => x.Key == d);
+            long sum = 0;
+            if (g is not null)
+                foreach (var r in g)
+                {
+                    if ((r.Provider + "/" + r.Model) != modelKey) continue;
+                    sum += mul ? r.MulTotal : r.TotalTokens;
+                }
+            pts.Add(new ChartPoint(d[5..], sum));
+        }
+        return pts;
+    }
+
+    /// <summary>落地 7 点（UI 线程）：值与标签都变了才动集合；entrance=false → LiveVersion（不重放动画）。</summary>
+    private void ApplyPts(List<ChartPoint> pts, bool entrance)
+    {
+        if (pts.Count != 7) return;
+        if (Chart.Count == pts.Count)
+        {
+            var same = true;
+            for (var i = 0; i < pts.Count; i++)
+                if (Chart[i].Label != pts[i].Label || Math.Abs(Chart[i].Value - pts[i].Value) > 0.5) { same = false; break; }
+            if (same) return;
+        }
+        if (Chart.Count != pts.Count)
+        {
+            Chart.Clear();
+            foreach (var p in pts) Chart.Add(p);
+        }
+        else
+        {
+            for (var i = 0; i < pts.Count; i++) Chart[i] = pts[i];
+        }
+        if (entrance) ChartVersion++; else LiveVersion++;
+    }
+
+    /// <summary>200ms 实时路径：把“今日点”替换为与卡片同源的快照值（无动画、无 DB）。
+    /// 跨零点窗口（最后一个点还是昨天的标签）不动，等 DayRolledOver 的强制重查重排日期。</summary>
+    private void UpdateLiveTodayPoint(CardViewModel card)
+    {
+        if (Chart.Count != 7) return;
+        var today = TodayLabel(card);
+        if (Chart[6].Label != today) return;
+        var v = LiveTodayValue(card);
+        if (Math.Abs(Chart[6].Value - v) <= 0.5) return; // 无变化不重绘（TrendChart7 也有同值脏检查）
+        Chart[6] = Chart[6] with { Value = v };
+        LiveVersion++;
+    }
+
+    private string TodayLabel(CardViewModel card) => card.IsUtc
+        ? DateTime.UtcNow.ToString("yyyy-MM-dd")
+        : DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromMinutes(_svc.Engine.Config.Settings.OffsetMin))
+            .ToString("yyyy-MM-dd");
+
+    /// <summary>与卡片渲染同一份数据：今日点的实时值（实际/倍率视图随卡）。</summary>
+    private long LiveTodayValue(CardViewModel card)
+    {
+        var s = card.CurrentSnap;
+        return s is null ? 0 : (card.MultiplierView ? s.MulTotal : s.TotalTokens);
+    }
+
+    /// <summary>折线数据版本：数据有任何落地（含 200ms 今日点实时更新）时 ++；
+    /// MainWindow 据此重设 Trend.Points/Labels。入场动画只看 ChartVersion。</summary>
+    [ObservableProperty] private int _liveVersion;
+
+    /// <summary>入场动画版本：仅在切换卡片/手动“刷新数据”的强制重查落地时 ++（重放描边动画）。</summary>
     [ObservableProperty] private int _chartVersion;
+    private bool _entrancePending;
 
     /// <summary>双钟文本（MainViewModel 每秒写入）。</summary>
     [ObservableProperty] private string _utcClock = "--:--:--";

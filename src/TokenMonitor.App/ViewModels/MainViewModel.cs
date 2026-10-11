@@ -190,6 +190,7 @@ public partial class MainViewModel : ObservableObject
                 IsHidden = _hiddenMemo.Contains(key),
             };
             card.PropertyChanged += Card_PropertyChanged;
+            card.DataRefreshed += (_, _) => Side.ForceChartRefresh(withEntrance: true); // 卡片“刷新数据”→ 折线重查+入场动画
             Cards.Add(card);
             changed = true;
         }
@@ -245,8 +246,9 @@ public partial class MainViewModel : ObservableObject
 
     private void Card_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
+        // 口径/倍率视图切换 → 历史 6 天与今日点都要按新视图重查（今日点随后由 200ms 快照持续覆盖）
         if (sender is CardViewModel card && (e.PropertyName is nameof(CardViewModel.IsUtc) or nameof(CardViewModel.MultiplierView)))
-            Side.Render();
+            Side.ForceChartRefresh(withEntrance: false);
     }
 
     private void ApplyOrder()
@@ -302,7 +304,7 @@ public partial class MainViewModel : ObservableObject
     public void RefreshCard(CardViewModel card)
     {
         card.InvalidateCaches();
-        Side.Render();
+        Side.ForceChartRefresh(withEntrance: true); // 手动刷新：折线重查 + 入场动画（用户定稿的动画触发点）
     }
 
     // —— 配置/日期变更：口径缓存清空 [C17] ——
@@ -311,7 +313,7 @@ public partial class MainViewModel : ObservableObject
         if ((evt.Sections & (ConfigSectionFlags.Settings | ConfigSectionFlags.Pricing)) != 0)
         {
             foreach (var card in Cards) card.InvalidateCaches();
-            Side.Render();
+            Side.ForceChartRefresh(withEntrance: false); // 改价/校准会重算历史日 → 静默重查（不重放动画）
         }
         _svc.Tray?.RefreshChecks();
     }
@@ -319,7 +321,7 @@ public partial class MainViewModel : ObservableObject
     private void OnDayRolledOver(DayRolledOver evt)
     {
         foreach (var card in Cards) card.InvalidateCaches();
-        Side.Render();
+        Side.ForceChartRefresh(withEntrance: false); // 跨零点：日期整体右移一位，立即重排
     }
 
     private void OnProxyStateChanged(ProxyStateChangedEvent evt)

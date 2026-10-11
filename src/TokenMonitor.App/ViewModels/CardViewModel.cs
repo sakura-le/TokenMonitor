@@ -134,6 +134,12 @@ public partial class CardViewModel : ObservableObject
     private ModelSnapshot? _utcSnap;
     private ModelSnapshot? _localSnap;
 
+    /// <summary>当前口径的实时快照（与卡片渲染同源；详情折线的“今日点”复用，保证两处数字一致）。</summary>
+    public ModelSnapshot? CurrentSnap => IsUtc ? _utcSnap : _localSnap;
+
+    /// <summary>手动“刷新数据”（卡片设置菜单 / F5 经 RefreshCard）后触发；详情折线据此重放入场动画。</summary>
+    public event EventHandler? DataRefreshed;
+
     // —— 范围查询防串 [C16] ——
     private int _queryGeneration;
     private string _pendingQueryKey = "";
@@ -197,6 +203,7 @@ public partial class CardViewModel : ObservableObject
 
     public void Refresh()
     {
+        DataRefreshed?.Invoke(this, EventArgs.Empty);
         if (Range == CardRange.Today) Render();
         else BeginRangeQuery();
     }
