@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -12,9 +13,11 @@ public interface ICalibrationService
     CalibrateState State { get; }
 
     /// <summary>补录：Backup → InsertEstimatedUsage(均分 count 份、余数入最后一笔) → ClearMissedByModel →
-    /// RecalcDerived → RebuildToday → 持久化 HasCalibrated → 触发 CalibrateCompleted。返回备份路径。</summary>
+    /// RecalcDerived → RebuildToday → 持久化 HasCalibrated → 触发 CalibrateCompleted。返回备份路径。
+    /// <paramref name="localDate"/>（yyyy-MM-dd，可空=今天）按**统计时区的本地日历**指定归属日：
+    /// 估算行落在该日（时分秒沿用当下，date=今天时与旧行为逐字一致），且只清该日的漏抓。</summary>
     string ApplyManualCalibrate(string provider, string model, int requestCount,
-                                long cacheHit, long cacheMiss, long output);
+                                long cacheHit, long cacheMiss, long output, string? localDate = null);
 
     /// <summary>回滚：无记录/备份缺失 → InvalidOperationException；成功后 HasCalibrated=false（该轮备份已消费）。</summary>
     void RollbackLastCalibration();
@@ -37,9 +40,11 @@ public sealed class CalibrationService : ICalibrationService
     private readonly string _statePath;
     private readonly TokenMonitor.Core.Events.IEventBus _bus;
     private readonly TimeProvider _clock;
+    private readonly Func<int> _offsetMin;
 
     public CalibrationService(Store store, RateFunc? rateFn, CostFunc? costFn, Action rebuildToday,
-                              string dataDir, TokenMonitor.Core.Events.IEventBus bus, TimeProvider? clock = null)
+                              string dataDir, TokenMonitor.Core.Events.IEventBus bus, TimeProvider? clock = null,
+                              Func<int>? offsetMin = null)
     {
         _store = store;
         _rateFn = rateFn;
@@ -48,12 +53,13 @@ public sealed class CalibrationService : ICalibrationService
         _statePath = Path.Combine(dataDir, "calibrate_state.json");
         _bus = bus;
         _clock = clock ?? TimeProvider.System;
+        _offsetMin = offsetMin ?? (() => 0);
     }
 
     public CalibrateState State => LoadState();
 
     public string ApplyManualCalibrate(string provider, string model, int requestCount,
-                                       long cacheHit, long cacheMiss, long output)
+                                       long cacheHit, long cacheMiss, long output, string? localDate = null)
     {
         if (Monitor.IsEntered(this))
             throw new InvalidOperationException("补录流程不支持重入");
@@ -66,14 +72,37 @@ public sealed class CalibrationService : ICalibrationService
             if (cacheHit == 0 && cacheMiss == 0 && output == 0)
                 throw new ArgumentException("token 数值均为 0，无需补录");
 
-            var rows = SplitManualRows(provider, model, requestCount, cacheHit, cacheMiss, output);
+            var now = _clock.GetUtcNow().ToUnixTimeSeconds();
+            var ts = now;
+            long? missStart = null, missEnd = null;
+            var date = string.IsNullOrWhiteSpace(localDate) ? null : localDate.Trim();
+            if (date is not null)
+            {
+                // 指定归属日：按统计时区本地日历换算；时刻沿用当下平移到该日
+                // （date=今天 ⇒ 结果就是 now，与旧行为逐字一致）
+                if (!DateOnly.TryParseExact(date, "yyyy-MM-dd", CultureInfo.InvariantCulture,
+                        DateTimeStyles.None, out _))
+                    throw new ArgumentException($"date 格式应为 yyyy-MM-dd，实际: {date}");
+                var offset = _offsetMin();
+                var todayLocal = TimeMath.LocalDate(now, offset);
+                if (string.CompareOrdinal(date, todayLocal) > 0)
+                    throw new ArgumentException($"不能补录未来日期：{date} 晚于今天（{todayLocal}）");
+                var dayStart = TimeMath.LocalDayStart(date, offset);
+                var secOfDay = now - TimeMath.LocalDayStart(todayLocal, offset);
+                ts = dayStart + Math.Clamp(secOfDay, 0L, 86399L);
+                missStart = dayStart;
+                missEnd = dayStart + 86400;
+            }
+
+            var rows = SplitManualRows(provider, model, requestCount, cacheHit, cacheMiss, output, ts);
             var backup = _store.Backup(); // 先 Flush + VACUUM INTO
             _store.InsertEstimatedUsage(rows); // 事务直写 estimated=1
-            _store.ClearMissedByModel(provider, model); // 清该模型漏抓 → 红框消失（原语义）
+            // 清漏抓：未指定日期=该模型全部（原语义）；指定日期=只清该日窗口，别日告警保持可见
+            _store.ClearMissedByModel(provider, model, missStart, missEnd);
             _store.RecalcDerived(_rateFn, _costFn); // [C1] UPSERT：当日无 daily 行也会生成
             _rebuildToday(); // 整桶热重载（不重启监听；D6-1）
             _store.LogOp(provider + "/" + model, "manual_calibrate",
-                $"补录 count={requestCount} hit={cacheHit} miss={cacheMiss} output={output} 备份={backup}", "");
+                $"补录 date={date ?? "今天"} count={requestCount} hit={cacheHit} miss={cacheMiss} output={output} 备份={backup}", "");
             SaveState(new CalibrateState(true, backup));
             _bus.Publish(new CalibrateCompleted(backup));
             return backup;
@@ -98,15 +127,17 @@ public sealed class CalibrationService : ICalibrationService
         }
     }
 
-    /// <summary>均分拆分（02-§6.1，原 splitManualRows 逐字保持）：各分量整数均分，余数全部记入最后一笔；prompt=hit+miss；total=prompt+output。</summary>
+    /// <summary>均分拆分（02-§6.1，原 splitManualRows 逐字保持）：各分量整数均分，余数全部记入最后一笔；prompt=hit+miss；total=prompt+output。
+    /// <paramref name="ts"/> 为空时取当前时刻（旧行为）。</summary>
     internal static IReadOnlyList<UsageLogRow> SplitManualRows(string provider, string model,
-                                                               int count, long hit, long miss, long output)
+                                                               int count, long hit, long miss, long output,
+                                                               long? ts = null)
     {
         if (count < 1) count = 1;
         var bH = hit / count; var rH = hit % count;
         var bM = miss / count; var rM = miss % count;
         var bO = output / count; var rO = output % count;
-        var ts = TimeProvider.System.GetUtcNow().ToUnixTimeSeconds(); // 全部同一秒（原语义）
+        var at = ts ?? TimeProvider.System.GetUtcNow().ToUnixTimeSeconds(); // 全部同一秒（原语义）
         var rows = new List<UsageLogRow>(count);
         for (var i = 0; i < count; i++)
         {
@@ -115,7 +146,7 @@ public sealed class CalibrationService : ICalibrationService
             var m = bM + (last ? rM : 0);
             var o = bO + (last ? rO : 0);
             var prompt = h + m; // prompt=hit+miss 恒等式
-            rows.Add(new UsageLogRow(ts, provider, model, prompt, h, m, o, 0, prompt + o));
+            rows.Add(new UsageLogRow(at, provider, model, prompt, h, m, o, 0, prompt + o));
         }
         return rows;
     }

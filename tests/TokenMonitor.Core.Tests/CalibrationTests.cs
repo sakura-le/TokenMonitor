@@ -171,4 +171,71 @@ public class CalibrationTests : IDisposable
         var svc = NewService();
         Assert.Throws<InvalidOperationException>(() => svc.RollbackLastCalibration());
     }
+
+    // —— 指定归属日期（补录某天的数据）——
+
+    private CalibrationService NewServiceAt(TestClock clock, int offsetMin = 480) =>
+        new(_store, (_, _, _, _) => 1.0, (_, _, _, _, _, _, _) => (0.0, 0.0),
+            () => { }, _dir.Path, _bus, clock, () => offsetMin);
+
+    [Fact]
+    public void Calibration_Backfill_SpecificDate_LandsOnThatDay_AndClearsOnlyThatDayMisses()
+    {
+        // 本地日历 UTC+8，当下 = 本地 10-11 14:00。补录 10-05：
+        // 估算行落在 10-05（时刻沿用当下时分秒平移），且只清 10-05 的漏抓，今天的告警保持可见
+        var clock = new TestClock(new DateTimeOffset(2026, 10, 11, 6, 0, 0, TimeSpan.Zero));
+        var svc = NewServiceAt(clock);
+
+        var dayA = TimeMath.LocalDayStart("2026-10-05", 480) + 3600;
+        _store.AddMissed(new MissedLogRow(0, dayA, "P", "m", 0, "test"));
+        _store.AddMissed(new MissedLogRow(0, clock.NowUnix, "P", "m", 0, "test"));
+
+        svc.ApplyManualCalibrate("P", "m", 1, 10, 5, 7, "2026-10-05");
+
+        var day = _store.QueryDailyRange("2026-10-05", "2026-10-05").Single();
+        Assert.Equal(15, day.PromptTokens);  // hit + miss
+        Assert.Equal(22, day.TotalTokens);   // prompt + output
+        Assert.Equal(1, day.RequestCount);
+        Assert.Empty(_store.QueryDailyRange("2026-10-11", "2026-10-11")); // 今天不受影响
+
+        Assert.Empty(_store.GetMissed(dayA - 7200, dayA + 86400));        // 该日漏抓已清
+        Assert.Single(_store.GetMissed(clock.NowUnix - 60, clock.NowUnix + 60)); // 今日漏抓仍在
+
+        Assert.Contains(_store.GetOpLogs(null),
+            o => o.Action == "manual_calibrate" && o.Detail.Contains("date=2026-10-05"));
+    }
+
+    [Fact]
+    public void Calibration_Backfill_DateEqualsToday_MatchesLegacyTs()
+    {
+        // date=今天 ⇒ 时刻平移退化为 now，与旧行为逐字一致（同日同秒）
+        var clock = new TestClock(new DateTimeOffset(2026, 10, 11, 6, 0, 0, TimeSpan.Zero));
+        var svc = NewServiceAt(clock);
+        svc.ApplyManualCalibrate("P", "m", 2, 10, 0, 7, "2026-10-11");
+        var rows = _store.GetLogsByRange(0, long.MaxValue);
+        Assert.Equal(2, rows.Count);
+        Assert.All(rows, r => Assert.Equal(clock.NowUnix, r.Ts));
+    }
+
+    [Fact]
+    public void Calibration_Backfill_NoDate_KeepsLegacy_ClearAllMisses()
+    {
+        // 不传日期 = 原语义：清该模型全部漏抓（跨日也清）
+        var clock = new TestClock(new DateTimeOffset(2026, 10, 11, 6, 0, 0, TimeSpan.Zero));
+        var svc = NewServiceAt(clock);
+        _store.AddMissed(new MissedLogRow(0, TimeMath.LocalDayStart("2026-10-05", 480), "P", "m", 0, "old"));
+        _store.AddMissed(new MissedLogRow(0, clock.NowUnix, "P", "m", 0, "today"));
+        svc.ApplyManualCalibrate("P", "m", 1, 10, 0, 5);
+        Assert.Empty(_store.GetMissed(0, long.MaxValue));
+    }
+
+    [Fact]
+    public void Calibration_Backfill_BadOrFutureDate_Throws()
+    {
+        var clock = new TestClock(new DateTimeOffset(2026, 10, 11, 6, 0, 0, TimeSpan.Zero));
+        var svc = NewServiceAt(clock);
+        Assert.Throws<ArgumentException>(() => svc.ApplyManualCalibrate("P", "m", 1, 10, 0, 5, "2026-10-12")); // 未来
+        Assert.Throws<ArgumentException>(() => svc.ApplyManualCalibrate("P", "m", 1, 10, 0, 5, "20261005"));   // 格式
+        Assert.Throws<ArgumentException>(() => svc.ApplyManualCalibrate("P", "m", 1, 10, 0, 5, "2026-10-5"));  // 非补零
+    }
 }

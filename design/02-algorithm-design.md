@@ -910,19 +910,28 @@ VALUES (@ts,@provider,@model,@p,@hit,@miss,@comp,@reas,@total,1);
 ### 6.2 应用流程（备份 → 补录 → 清漏抓 → 重算 → 热重载）
 
 ```
-ApplyManualCalibrate(provider, model, count, hit, miss, output):   -- 方法级串行锁；重入抛
-  rows    = SplitManualRows(...)                                    -- §6.1
-  backup  = store.Backup()                                          -- VACUUM INTO（先 Flush）
-  store.InsertEstimatedUsage(rows)                                  -- 事务直写 estimated=1
-  store.ClearMissedByModel(provider, model)                         -- 清该模型漏抓 → 红框消失（原语义）
-  store.RecalcDerived(rateFn, costFn)                               -- [C1] UPSERT：当日无 daily 行也会生成
-  coordinator.RebuildToday()                                        -- 热重载两桶（不重启监听；单进程监听本就不动）
-  LogOp(key, "manual_calibrate", "补录 count=… hit=… miss=… output=… 备份=…", "")
+ApplyManualCalibrate(provider, model, count, hit, miss, output, localDate=null):   -- 方法级串行锁；重入抛
+  if localDate ≠ null:                                   -- 指定归属日（统计时区本地日历）
+      校验 yyyy-MM-dd 且 ≤ 本地今天（未来/格式非法 → ArgumentException）
+      dayStart = LocalDayStart(localDate, offsetMin)
+      ts       = dayStart + clamp(now − LocalDayStart(本地今天, offsetMin))   -- 时分秒平移；localDate=今天 ⇒ ts=now
+      [missStart, missEnd) = [dayStart, dayStart + 86400)
+  else ts = now；missStart = missEnd = null               -- 旧行为逐字保持
+  rows    = SplitManualRows(..., ts)                      -- §6.1（均分，余数入最后一笔）
+  backup  = store.Backup()                                -- VACUUM INTO（先 Flush）
+  store.InsertEstimatedUsage(rows)                        -- 事务直写 estimated=1
+  store.ClearMissedByModel(provider, model, missStart, missEnd)
+                                                          -- null 窗口=清该模型全部（原语义）；
+                                                          -- 指定日期=只清该日，别日告警保持可见
+  store.RecalcDerived(rateFn, costFn)                     -- [C1] UPSERT：该日无 daily 行也会生成
+  coordinator.RebuildToday()                              -- 热重载两桶（不重启监听；单进程监听本就不动）
+  LogOp(key, "manual_calibrate", "补录 date=… count=… hit=… miss=… output=… 备份=…", "")
   持久化 calibrate_state { has_calibrated: true, last_backup: backup }
-  bus.Publish(CalibrateCompleted(backup))                           -- 托盘启用"回滚上一轮数据"
+  bus.Publish(CalibrateCompleted(backup))                 -- 托盘启用"回滚上一轮数据"
   return backup
 ```
 - 与原 `ApplyManualCalibrate` 的差异 D6-1：`reloadAcc`（ResetKeepModels→SetTodayStats→seed→rebuildLocalToday）改为 `RebuildToday()` 整桶替换——修复 S1 的残留态问题，行为等价且更纯净；补录行 ts=now → 落 UTC 今日 daily 行（C1 保证无 daily 行时也生成 → UTC 视图/近 N 天/导出可见，原版该场景静默丢数）。
+- **归属日期（localDate）**：补录的是"某天的聚合"，而计价按时段/星期匹配，故估算行需要一个确定时刻——取"当下的时分秒平移到该日"，使 `localDate=今天` 与旧行为逐字一致；其它日期同理（同一时刻口径，避免 00:00 一律落优惠段的任意性）。漏抓清理随之按该日本地日窗口限定。
 - `ClearMissedIDs`（按主键精确清除）不用于此流程（原实现即用 ByModel），保留接口用于将来按列表校准——文档化保持。
 - 复杂度：O(N) 重算为主（全量 RecalcDerived）。
 - 回归要点：端到端——当日无任何 daily 行的模型补录 3 笔（hit=10, miss=0, output=7, count=3 → 行 [(4,0,2),(4,0,2),(2,0,3)]，prompt=4/4/2，total=6/6/5）→ usage_log 3 行 estimated=1、daily 行生成、UTC 视图/快照可见、漏抓清零（C1+§6 联合回归）；余数分配断言（上例）；回滚可完整撤销。

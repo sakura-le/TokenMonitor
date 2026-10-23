@@ -579,9 +579,12 @@ public interface ICalibrationService
     CalibrateState State { get; }   // data/calibrate_state.json
     /// <summary>补录：Backup → InsertEstimatedUsage(均分 count 份、余数入最后一笔、prompt=hit+miss、total=prompt+output)
     /// → ClearMissedByModel → RecalcDerived → RebuildToday → 持久化 HasCalibrated → 触发 CalibrateCompleted。
-    /// 参数校验：provider/model 非空、count≥1（<1 按 1）、hit+miss+output>0（否则 ArgumentException）。</summary>
+    /// 参数校验：provider/model 非空、count≥1（<1 按 1）、hit+miss+output>0（否则 ArgumentException）。
+    /// localDate（yyyy-MM-dd，null=今天）按**统计时区本地日历**指定归属日：估算行落在该日
+    /// （时刻沿用当下时分秒平移，date=今天时逐字等价于旧行为 ts=now），且只清该日窗口的漏抓；
+    /// 未来日期或格式非法 → ArgumentException。</summary>
     string ApplyManualCalibrate(string provider, string model, int requestCount,
-                                long cacheHit, long cacheMiss, long output);
+                                long cacheHit, long cacheMiss, long output, string? localDate = null);
     /// <summary>回滚：无记录/备份缺失 → InvalidOperationException；成功后 HasCalibrated=false（该轮备份已消费）。</summary>
     void RollbackLastCalibration();
 }

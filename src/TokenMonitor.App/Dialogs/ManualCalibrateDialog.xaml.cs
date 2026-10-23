@@ -7,8 +7,9 @@ namespace TokenMonitor.App.Dialogs;
 
 /// <summary>
 /// 对话框 3：手动补录（01-§3-D8）。
-/// 模型选择 / 笔数 N / 命中·未命中·输出 token（total 自动合计只读）/
+/// 模型选择 / 归属日期（统计时区本地日历，默认今天）/ 笔数 N / 命中·未命中·输出 token（total 自动合计只读）/
 /// 提示自动备份与漏抓清理。确认 → ICalibrationService.ApplyManualCalibrate（后台线程）。
+/// 指定日期时：估算行落在该日、且只清该日的漏抓（别日告警保持可见）。
 /// </summary>
 public partial class ManualCalibrateDialog : ShellDialog
 {
@@ -16,6 +17,7 @@ public partial class ManualCalibrateDialog : ShellDialog
     public ObservableCollection<string> ModelKeys { get; } = new();
 
     private string _chosenModel = "";
+    private string _dateText = "";
     private string _countText = "1";
     private string _hitText = "0";
     private string _missText = "0";
@@ -24,6 +26,8 @@ public partial class ManualCalibrateDialog : ShellDialog
     private bool _busy;
 
     public string ChosenModel { get => _chosenModel; set => Set(ref _chosenModel, value, nameof(ChosenModel)); }
+    /// <summary>归属日期 yyyy-MM-dd（按统计时区本地日历）；留空=今天。</summary>
+    public string DateText { get => _dateText; set => Set(ref _dateText, value, nameof(DateText)); }
     public string CountText { get => _countText; set { if (Set(ref _countText, value, nameof(CountText))) Raise(nameof(TotalText)); } }
     public string HitText { get => _hitText; set { if (Set(ref _hitText, value, nameof(HitText))) Raise(nameof(TotalText)); } }
     public string MissText { get => _missText; set { if (Set(ref _missText, value, nameof(MissText))) Raise(nameof(TotalText)); } }
@@ -50,6 +54,10 @@ public partial class ManualCalibrateDialog : ShellDialog
         if (_svc.Main is not null)
             foreach (var c in _svc.Main.Cards) keys.Add(c.Key);
         foreach (var k in keys) ModelKeys.Add(k);
+        // 归属日期默认今天（统计时区本地日历）；走属性赋值以刷新绑定
+        DateText = DateTimeOffset.UtcNow
+            .ToOffset(TimeSpan.FromMinutes(svc.Engine.Config.Settings.OffsetMin))
+            .ToString("yyyy-MM-dd");
         OnConfirm = Save;
     }
 
@@ -78,24 +86,37 @@ public partial class ManualCalibrateDialog : ShellDialog
         var provider = i < 0 ? "" : ChosenModel[..i];
         var model = i < 0 ? ChosenModel : ChosenModel[(i + 1)..];
 
+        // 归属日期：留空=今天（传 null）；格式校验前置，未来日期直接拒绝
+        var date = DateText.Trim();
+        if (date.Length == 0)
+            date = "";
+        else if (!DateOnly.TryParseExact(date, "yyyy-MM-dd", CultureInfo.InvariantCulture,
+                     System.Globalization.DateTimeStyles.None, out _))
+        {
+            ErrorText = "日期格式应为 yyyy-MM-dd（留空=今天）";
+            return false;
+        }
+
         // 后台执行（备份+事务+重算可能耗时），完成经 Dispatcher 关闭 [§8.3]
         _busy = true;
         ConfirmEnabled = false;
         ErrorText = "正在补录（自动备份 → 估算行 → 清理漏抓 → 重算）…";
         var capturedModel = ChosenModel;
+        var capturedDate = date;
         Task.Run(() =>
         {
             try
             {
                 var backup = _svc.Engine.Calibration.ApplyManualCalibrate(provider, model,
-                    (int)Math.Max(1, count), hit, miss, output);
-                Core.SysUtil.Logger.Info("App", $"manual calibrate: {capturedModel} n={count} backup={backup}");
+                    (int)Math.Max(1, count), hit, miss, output,
+                    capturedDate.Length == 0 ? null : capturedDate);
+                Core.SysUtil.Logger.Info("App", $"manual calibrate: {capturedModel} date={capturedDate} n={count} backup={backup}");
                 Dispatcher.BeginInvoke(() =>
                 {
-                    _svc.Tray?.ShowBalloon("手动补录", $"已补录 {capturedModel}，备份: {System.IO.Path.GetFileName(backup)}");
+                    _svc.Tray?.ShowBalloon("手动补录",
+                        $"已补录 {capturedModel}（{capturedDate}）· 备份: {System.IO.Path.GetFileName(backup)}");
                     _svc.Tray?.SetRollbackEnabled(SafeState());
                     Confirmed = true;
-                        Close();
                     Close();
                 });
             }

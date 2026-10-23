@@ -72,7 +72,8 @@ public sealed class MonitorEngine : ITokenMonitorEngine
         Exporter = new ExportService(_storeConcrete, _rateFn, _costFn,
             () => Config.Settings.OffsetMin, Path.Combine(_dataDir, "export"), _clock);
         Calibration = new CalibrationService(_storeConcrete, _rateFn, _costFn,
-            () => _coordinator.RebuildToday(), _dataDir, Bus, _clock);
+            () => _coordinator.RebuildToday(), _dataDir, Bus, _clock,
+            () => Config.Settings.OffsetMin);   // 补录指定日期时按统计时区解释该日
         Import = new ImportService(_storeConcrete, _configConcrete, _pricingConcrete, _rateFn, _costFn,
             () => _coordinator.RebuildToday(), _dataDir, Bus, _clock);
 

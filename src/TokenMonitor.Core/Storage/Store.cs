@@ -710,17 +710,28 @@ public sealed class Store : IStore
         }
     }
 
-    /// <summary>清除指定厂商+模型的漏抓记录（手动补录后红框消失；具体类成员，供 CalibrationService 使用）。</summary>
-    public void ClearMissedByModel(string provider, string model)
+    /// <summary>清除指定厂商+模型的全部漏抓记录（手动补录后红框消失；具体类成员，供 CalibrationService 使用）。</summary>
+    public void ClearMissedByModel(string provider, string model) => ClearMissedByModel(provider, model, null, null);
+
+    /// <summary>按 ts 窗口 [startTs, endTs) 限定清理：补录指定日期时只清该日的漏抓，
+    /// 其它日期（含今天）的漏抓保持可见，避免"补历史却抹掉当前告警"。</summary>
+    public void ClearMissedByModel(string provider, string model, long? startTs, long? endTs)
     {
         try
         {
             lock (_gate)
             {
                 using var cmd = _conn.CreateCommand();
-                cmd.CommandText = "DELETE FROM usage_missed WHERE provider = @p AND model = @m";
+                cmd.CommandText = startTs is null
+                    ? "DELETE FROM usage_missed WHERE provider = @p AND model = @m"
+                    : "DELETE FROM usage_missed WHERE provider = @p AND model = @m AND ts >= @s AND ts < @e";
                 cmd.Parameters.AddWithValue("@p", provider);
                 cmd.Parameters.AddWithValue("@m", model);
+                if (startTs is not null)
+                {
+                    cmd.Parameters.AddWithValue("@s", startTs.Value);
+                    cmd.Parameters.AddWithValue("@e", endTs!.Value);
+                }
                 cmd.ExecuteNonQuery();
             }
         }

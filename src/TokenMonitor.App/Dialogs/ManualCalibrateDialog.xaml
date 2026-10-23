@@ -4,7 +4,7 @@
         xmlns:dialogs="clr-namespace:TokenMonitor.App.Dialogs"
         x:Class="TokenMonitor.App.Dialogs.ManualCalibrateDialog"
         HeaderTag="FIX" HeaderTitle="手动补录" ModelTag="{Binding ChosenModel}"
-        VersionText="补录将自动备份 → 插入估算行(estimated) → 清理该模型漏抓 → 重算今日"
+        VersionText="补录自动备份 → 估算行(estimated) → 清理该日漏抓 → 重算（日期按统计时区本地日历）"
         FooterHint="总量均分为 N 笔（余数入最后一笔）· prompt = hit + miss · total = prompt + output"
         ConfirmText="补录并生效" Width="540">
     <dialogs:ShellDialog.Content>
@@ -13,6 +13,27 @@
                 <TextBlock Text="模型 MODEL" Style="{StaticResource Tg.MicroLabel}" Margin="0,0,0,5"/>
                 <ComboBox Style="{StaticResource Tg.Combo}" ItemsSource="{Binding ModelKeys}"
                           SelectedItem="{Binding ChosenModel}"/>
+            </StackPanel>
+            <StackPanel Margin="0,0,0,11">
+                <TextBlock Text="归属日期 DATE（yyyy-MM-dd · 本地日历）" Style="{StaticResource Tg.MicroLabel}"
+                           Margin="0,0,0,5"/>
+                <Grid>
+                    <TextBox Style="{StaticResource Tg.Input}" Text="{Binding DateText, UpdateSourceTrigger=PropertyChanged}"/>
+                    <!-- 水印：留空=今天 -->
+                    <TextBlock Text="留空 = 今天" Margin="9,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False"
+                               FontSize="11" Foreground="{DynamicResource Tg.Ink.Faint}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding DateText}" Value="">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
             </StackPanel>
             <Grid Margin="0,0,0,11">
                 <Grid.ColumnDefinitions>
